@@ -18,5 +18,5 @@
 >> Exit = 'Esc'
 ```
 
-This is my version of the game made in C++.
-Enjoy :3
+This is my version of the game made in C++, using the OpenGL graphics API and the GLUT toolkit. If you want to play, download the folder and simply open the `.exe` file.
+Enjoy the game :3
