@@ -1,0 +1,12 @@
+{
+  "name": "pong-game",
+  "version": "1.0.0",
+  "description": "Retro Neon Pong compiled to WebAssembly",
+  "scripts": {
+    "start": "serve web",
+    "build": "docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) emscripten/emsdk emcc Files/main.cpp -o web/pong.js -s LEGACY_GL_EMULATION=1 -s WASM=1"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
