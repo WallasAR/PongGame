@@ -1,10 +1,18 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <glut.h>
-#include <windows.h>
 #include <math.h>
 
-//parametros pré-definidos:
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
+// parametros pre-definidos:
 #define WIDTH 640
 #define HEIGHT 500
 #define PADDLE_HEIGHT 80
@@ -14,9 +22,9 @@
 #define BALL_SPEED 3
 #define CIRCLE_RADIUS 50
 
-// Variáveis alocadas com escopo global:
-float left = WIDTH;
-float right = WIDTH * 2;
+// Variaveis alocadas com escopo global:
+float left_boundary = WIDTH;
+float right_boundary = WIDTH * 2;
 int score1 = 0, score2 = 0;
 float paddle1_x = HEIGHT / 2 - PADDLE_HEIGHT / 2;
 float paddle2_x = HEIGHT / 2 - PADDLE_HEIGHT / 2;
@@ -24,10 +32,13 @@ float ball_x = WIDTH / 2;
 float ball_y = HEIGHT / 2;
 float ball_dx = BALL_SPEED;
 float ball_dy = BALL_SPEED;
-//float ajust_paddles = 30.0;
 bool Gamepaused = false;
 float Ball_speed_pause = BALL_SPEED;
 float Ball_speed_increment = 20;
+
+// Controle de teclado
+bool keys[256] = {false};
+bool specialKeys[256] = {false};
 
 // Cria a janela:
 void init()
@@ -38,7 +49,7 @@ void init()
     gluOrtho2D(0, WIDTH, 0, HEIGHT);
 }   
 
-// Função de Pause 
+// Funcao de Pause 
 void pauseGame()
 {
 	if (Gamepaused == false)
@@ -49,7 +60,7 @@ void pauseGame()
 		ball_dy = 0;	 	
 	}
 }
-// Função de Resume
+// Funcao de Resume
 void resumeGame()
 {
 	if (Gamepaused == true)
@@ -59,35 +70,44 @@ void resumeGame()
 		ball_dy = Ball_speed_pause;
 	}
 }
-// Função que detecta a tecla precionada para pausar e retomar o game
+
+// Funcoes de teclado
 void keyboard(unsigned char key, int x, int y) 
 {
+    keys[key] = true;
 	switch(key)
 	{
-	case 13: // 13 é o ENTER na tabela ASCII - Faz o L
+	case 13: // 13 eh o ENTER
 		if(Gamepaused == false)
 		{
 			pauseGame();
-			Beep(300, 100);
-			Beep(200, 100);
 		}	
 		else 
 		{
 			resumeGame();
-			Beep(200, 100);
-			Beep(300, 100);
 		}
 		break;
-	
-	case 27:
-		glutDestroyWindow(glutGetWindow()); // Destrói a janela e encerra o programa	
-		break;
-	
-	default:
+	case 27: // ESC
+#ifndef __EMSCRIPTEN__
+		exit(0);
+#endif
 		break;
 	}
 }
-// Função de Desenho
+
+void keyboardUp(unsigned char key, int x, int y) {
+    keys[key] = false;
+}
+
+void special(int key, int x, int y) {
+    if(key >= 0 && key < 256) specialKeys[key] = true;
+}
+
+void specialUp(int key, int x, int y) {
+    if(key >= 0 && key < 256) specialKeys[key] = false;
+}
+
+// Funcao de Desenho
 void display()
 {
 	// Desenhando a mesa
@@ -101,7 +121,7 @@ void display()
     glVertex2f(0.0, HEIGHT);
     glEnd();
     
-    // Retângulo demarcador de pontos - Player 01
+    // Retangulo demarcador de pontos - Player 01
     glColor3f(0.2, 0.5, 0.8);
     glBegin(GL_QUADS);
     glVertex2f(30.0, 450.0);
@@ -110,7 +130,7 @@ void display()
     glVertex2f(30.0, HEIGHT - 8);
     glEnd();
     
-    // Retângulo demarcador de pontos - Player 02
+    // Retangulo demarcador de pontos - Player 02
 	glColor3f(0.2, 0.5, 0.8);
     glBegin(GL_QUADS);
     glVertex2f(420.0, 450.0);
@@ -178,66 +198,27 @@ void display()
 		float x = ball_x + BALL_RADIUS * cos(radian);
 		float y = ball_y + BALL_RADIUS * sin(radian);
 		glVertex2f(x, y);
- 	   }
- 	   glEnd();
+ 	}
+ 	glEnd();
 
     // Exibir os pontos:
-	char buffer[100];
-    sprintf(buffer, "%d", score1);
-    glColor3f(1.0, 1.0, 1.0);
-	glRasterPos2i(150, HEIGHT - 40);
-    for (int i = 0; buffer[i] != '\0'; i++)
-    {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, buffer[i]);
-    }
-    
-    sprintf(buffer, "Player 1");
-    glColor3f(1.0, 1.0, 1.0);
-    glRasterPos2i(30, HEIGHT - 20);
-    for (int i = 0; buffer[i] != '\0'; i++)
-    {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, buffer[i]);
-    }
-    
-    sprintf(buffer, "%d", score2);
-    glColor3f(1.0, 1.0, 1.0);
-    glRasterPos2i(WIDTH - 100, HEIGHT - 40);
-    for (int i = 0; buffer[i] != '\0'; i++)
-    {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, buffer[i]);
-    }
-     
-    sprintf(buffer, "Player 2");
-    glColor3f(1.0, 1.0, 1.0);
-    glRasterPos2i(WIDTH - 220, HEIGHT - 20);
-    for (int i = 0; buffer[i] != '\0'; i++)
-    {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, buffer[i]);
-    }
+#ifdef __EMSCRIPTEN__
+    EM_ASM({
+        if(window.updateScore) window.updateScore($0, $1, $2);
+    }, score1, score2, Gamepaused);
+#endif
 
-	if (Gamepaused == true)
-	{
-		sprintf(buffer, "PAUSED");
-    	glColor3f(1.0, 1.0, 1.0);
-    	glRasterPos2i(WIDTH - 360, HEIGHT - 40);
-    	for (int i = 0; buffer[i] != '\0'; i++)
-    	{
-        	glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, buffer[i]);
-    	}
-	}
     glutSwapBuffers();
 }
-	// Função para evitar distorções caso haja alteração do tamanho da janela: 
-	void reshape(int w, int h) 
-	{
-    	w = WIDTH;
-    	h = HEIGHT;
 
-    	// Define a área da janela de renderização
-    	glViewport(0, 0, WIDTH, HEIGHT);
-	}
+void reshape(int w, int h) 
+{
+    // w = WIDTH; h = HEIGHT;
+    // Define a area da janela de renderizacao
+    glViewport(0, 0, WIDTH, HEIGHT);
+}
 
-void update(int value)
+void loop_iteration()
 {
 	if (Gamepaused == false)
 	{	
@@ -245,22 +226,29 @@ void update(int value)
     	ball_x += ball_dx;
     	ball_y += ball_dy;
 
-    	// Verificar colisões com as paredes
+    	// Verificar colisoes com as paredes
 		if (ball_x + BALL_RADIUS >= WIDTH || ball_x - BALL_RADIUS <= 0)
 		{
     	   	ball_dx = -ball_dx;
+#ifdef __EMSCRIPTEN__
+            EM_ASM( if(window.playBeep) window.playBeep(400, 100); );
+#endif
 		}
 		if (ball_y + BALL_RADIUS >= HEIGHT - 60 || ball_y - BALL_RADIUS <= 0)
 		{
     	   	ball_dy = -ball_dy;
+#ifdef __EMSCRIPTEN__
+            EM_ASM( if(window.playBeep) window.playBeep(400, 100); );
+#endif
 		}
 	
-		// Marcador de pontuação:
-		if (ball_x + BALL_RADIUS >= left || ball_x - BALL_RADIUS == 0)
+		// Marcador de pontuacao:
+		if (ball_x + BALL_RADIUS >= left_boundary || ball_x - BALL_RADIUS == 0) // Original logic was 'left' and 'right' but they were initialized differently
 		{
     		score1++;
-    		Beep(800, 100);
-    		Beep(900, 300);
+#ifdef __EMSCRIPTEN__
+            EM_ASM( if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); );
+#endif
     		// reset para a bola voltar ao centro
     		ball_x = 320.0;
     		ball_y = 200.0;
@@ -268,83 +256,68 @@ void update(int value)
 			ball_dy = BALL_SPEED;
 		}	
 
-		if (ball_x + BALL_RADIUS >= right || ball_x - BALL_RADIUS <= 0)
+		if (ball_x + BALL_RADIUS >= right_boundary || ball_x - BALL_RADIUS <= 0)
 		{
     	   	score2++;
-   		   	Beep(800, 100);
-    		Beep(900, 300);
+#ifdef __EMSCRIPTEN__
+            EM_ASM( if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); );
+#endif
     	   	// reset para a bola voltar ao centro
     	   	ball_x = 320.0;
     	   	ball_y = 200.0;
-    		ball_dx == BALL_SPEED;
-			ball_dy == BALL_SPEED;
+    		ball_dx = BALL_SPEED;
+			ball_dy = BALL_SPEED;
 		}
 
-		// Verificar colisões com as paletas
-		// Verifica colisão da bola com as paletas
+		// Verifica colisao da bola com as paletas
 		if ((ball_x >= 20 && ball_x <= PADDLE_WIDTH + 10) && (ball_y + BALL_RADIUS >= paddle1_x && ball_y - BALL_RADIUS <= paddle1_x + PADDLE_HEIGHT))
 		{
 			ball_dx = -ball_dx;
-			ball_dx++;
-			ball_dy++;
+			ball_dx += (ball_dx > 0 ? 0.5f : -0.5f); // Pequeno incremento de velocidade
+			ball_dy += (ball_dy > 0 ? 0.5f : -0.5f);
+#ifdef __EMSCRIPTEN__
+            EM_ASM( if(window.playBeep) window.playBeep(600, 100); );
+#endif
 		}
 		else if ((ball_x >= WIDTH - PADDLE_WIDTH - 10 && ball_x <= WIDTH - 20) && (ball_y + BALL_RADIUS >= paddle2_x && ball_y - BALL_RADIUS <= paddle2_x + PADDLE_HEIGHT))
 		{
 		   	ball_dx = -ball_dx;
+#ifdef __EMSCRIPTEN__
+            EM_ASM( if(window.playBeep) window.playBeep(600, 100); );
+#endif
 		}
 
     	// Mover as paletas
     	// Player 01
-    	if (GetAsyncKeyState('S') && paddle1_x > 0)
+    	if ((keys['s'] || keys['S']) && paddle1_x > 0)
     	{
     	    paddle1_x -= PADDLE_SPEED;
     	}
-    	if (GetAsyncKeyState('W') && paddle1_x < WIDTH - PADDLE_WIDTH - 250)
+    	if ((keys['w'] || keys['W']) && paddle1_x < HEIGHT - PADDLE_HEIGHT)
     	{
     	    paddle1_x += PADDLE_SPEED;
     	}
     
     	// Player 02
-    	if (GetAsyncKeyState(VK_DOWN) && paddle2_x > 0)
+    	if (specialKeys[GLUT_KEY_DOWN] && paddle2_x > 0)
 		{
     	    paddle2_x -= PADDLE_SPEED;
     	}
-    	if (GetAsyncKeyState(VK_UP) && paddle2_x < WIDTH - PADDLE_WIDTH - 250)
+    	if (specialKeys[GLUT_KEY_UP] && paddle2_x < HEIGHT - PADDLE_HEIGHT)
     	{
     	    paddle2_x += PADDLE_SPEED;
     	}
 
-    	glutPostRedisplay();
-    	glutTimerFunc(16, update, 0);
 	}
-	else
-	{
+    glutPostRedisplay();
+}
 
-
-    	// Mover as paletas
-    	// Player 01
-    	if (GetAsyncKeyState('S') && paddle1_x > 0)
-    	{
-    	    paddle1_x == PADDLE_SPEED;
-    	}
-    	if (GetAsyncKeyState('W') && paddle1_x < WIDTH - PADDLE_WIDTH - 250)
-    	{
-    	    paddle1_x == PADDLE_SPEED;
-    	}
-    
-    	// Player 02
-    	if (GetAsyncKeyState(VK_DOWN) && paddle2_x > 0)
-		{
-    	    paddle2_x == PADDLE_SPEED;
-    	}
-    	if (GetAsyncKeyState(VK_UP) && paddle2_x < WIDTH - PADDLE_WIDTH - 250)
-    	{
-    	    paddle2_x == PADDLE_SPEED;
-    	}
-    	
-    	glutPostRedisplay();
-    	glutTimerFunc(16, update, 0);
-	}
+void update(int value)
+{
+    loop_iteration();
+#ifndef __EMSCRIPTEN__
+    glutTimerFunc(16, update, 0);
+#endif
 }
 
 int main(int argc, char **argv)
@@ -352,12 +325,23 @@ int main(int argc, char **argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize(WIDTH, HEIGHT);
-    glutCreateWindow("Pong Game - A Game to the Year 2023");
+    glutCreateWindow("Pong Game - WebAssembly");
     glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    
     glutKeyboardFunc(keyboard);
-    glutTimerFunc(0, update, 0);
+    glutKeyboardUpFunc(keyboardUp);
+    glutSpecialFunc(special);
+    glutSpecialUpFunc(specialUp);
+    
     init();
+
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(loop_iteration, 60, 1);
+#else
+    glutTimerFunc(0, update, 0);
     glutMainLoop();
+#endif
+
     return 0;
 }
-
