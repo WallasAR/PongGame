@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Neon Pong</title>
+    <style>
+        :root {
+            --bg-color: #0d0d12;
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ea;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(255, 0, 234, 0.15), transparent 25%);
+        }
+
+        h1 {
+            font-size: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+            animation: pulse 2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue); }
+            to { text-shadow: 0 0 15px var(--neon-blue), 0 0 30px var(--neon-blue), 0 0 40px var(--neon-blue); }
+        }
+
+        .game-container {
+            position: relative;
+            padding: 20px;
+            background: var(--glass-bg);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* O canvas gerado pelo emscripten */
+        canvas.emscripten {
+            display: block;
+            border: 2px solid var(--neon-pink);
+            border-radius: 8px;
+            box-shadow: 0 0 15px var(--neon-pink);
+            outline: none;
+            background-color: #000;
+        }
+        
+        .scoreboard {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 640px; /* same as width of canvas */
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            box-sizing: border-box;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        }
+
+        .score-box {
+            text-align: center;
+        }
+
+        .score-box h2 {
+            margin: 0;
+            color: var(--neon-blue);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+        }
+
+        .score-box .score {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        #pause-indicator {
+            color: var(--neon-pink);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: pulse 1s infinite alternate;
+            display: none;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 40px;
+            text-align: center;
+            background: var(--glass-bg);
+            padding: 15px 30px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .player-controls h3 {
+            color: var(--neon-blue);
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+        }
+
+        .player-controls p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        .key {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            min-width: 20px;
+        }
+
+        /* Overlay de Loading */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: var(--neon-blue);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Neon Pong</h1>
+
+    <div class="game-container">
+        <!-- Scoreboard HTML -->
+        <div class="scoreboard" aria-live="polite">
+            <div class="score-box">
+                <h2>Player 1</h2>
+                <div class="score" id="score1">0</div>
+            </div>
+            <div id="pause-indicator">PAUSADO</div>
+            <div class="score-box">
+                <h2>Player 2</h2>
+                <div class="score" id="score2">0</div>
+            </div>
+        </div>
+        
+        <!-- Canvas para o OpenGL via Emscripten -->
+        <div id="loading">Carregando Jogo...</div>
+        <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1" aria-label="Game Canvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <div class="player-controls">
+            <h3>Player 1</h3>
+            <p>Subir: <span class="key">W</span></p>
+            <p>Descer: <span class="key">S</span></p>
+        </div>
+        <div class="player-controls" style="border-left: 1px solid var(--glass-border); padding-left: 40px;">
+            <h3>Geral</h3>
+            <p>Pausar: <span class="key">Enter</span></p>
+        </div>
+        <div class="player-controls" style="border-left: 1px solid var(--glass-border); padding-left: 40px;">
+            <h3>Player 2</h3>
+            <p>Subir: <span class="key">↑</span></p>
+            <p>Descer: <span class="key">↓</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Função para atualizar o placar vindo do C++
+        let lastScore1 = 0;
+        let lastScore2 = 0;
+        window.updateScore = function(score1, score2, isPaused) {
+            if (score1 !== lastScore1) {
+                document.getElementById('score1').innerText = score1;
+                lastScore1 = score1;
+            }
+            if (score2 !== lastScore2) {
+                document.getElementById('score2').innerText = score2;
+                lastScore2 = score2;
+            }
+            document.getElementById('pause-indicator').style.display = isPaused ? 'block' : 'none';
+        };
+
+        // Funções de Audio via Web Audio API injetadas no emscripten
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        window.playBeep = function(freq, durationMs) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.type = 'sine'; // som estilo retro
+            oscillator.frequency.value = freq;
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.start();
+            
+            // Fade out para não estalar
+            gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (durationMs / 1000));
+            
+            oscillator.stop(audioCtx.currentTime + (durationMs / 1000));
+        };
+
+        // Configuração do Emscripten Module
+        var Module = {
+            preRun: [],
+            postRun: [
+                function() {
+                    document.getElementById('loading').style.display = 'none';
+                    // Foca o canvas automaticamente
+                    document.getElementById('canvas').focus();
+                }
+            ],
+            print: (function() {
+                return function(text) {
+                    if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                    console.log(text);
+                };
+            })(),
+            canvas: (function() {
+                var canvas = document.getElementById('canvas');
+                return canvas;
+            })(),
+            setStatus: function(text) {
+                if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+                if (text === Module.setStatus.last.text) return;
+                var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+                var now = Date.now();
+                if (m && now - Module.setStatus.last.time < 30) return; 
+                Module.setStatus.last.time = now;
+                Module.setStatus.last.text = text;
+                if (m) {
+                    text = m[1];
+                }
+                if(text) {
+                    document.getElementById('loading').innerText = text;
+                }
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+                Module.setStatus(left ? 'Preparando... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'Iniciando...');
+            }
+        };
+        Module.setStatus('Fazendo download...');
+        window.onerror = function(event) {
+            Module.setStatus('Exception thrown, see JavaScript console');
+            Module.setStatus = function(text) {
+                if (text) console.error('[post-exception status] ' + text);
+            };
+        };
+    </script>
+    <!-- O script gerado pelo emscripten -->
+    <script async type="text/javascript" src="pong.js"></script>
+</body>
+</html>
