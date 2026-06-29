@@ -143,6 +143,13 @@ void specialUp(int key, int x, int y) {
 // Funcao de Desenho
 void display()
 {
+    // Atualizar UI no Javascript independentemente do estado do jogo
+#ifdef __EMSCRIPTEN__
+    EM_ASM({
+        if(window.updateUI) window.updateUI($0, $1, $2, $3);
+    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused);
+#endif
+
 	// Desenhando a mesa
     glClear(GL_COLOR_BUFFER_BIT);
 	
@@ -181,39 +188,41 @@ void display()
     glVertex2f(WIDTH, 2.0);
     glEnd();
 		
- 	// Desenha as paletas usando GL_QUADS
+ 	// Desenha as paletas usando GL_TRIANGLES para compatibilidade WebGL
  	glColor3f(1.0, 1.0, 1.0);
  	
  	// Player 01:
- 	glBegin(GL_QUADS);
+ 	glBegin(GL_TRIANGLES);
  	glVertex2f(20.0, paddle1_x);
  	glVertex2f(PADDLE_WIDTH, paddle1_x);
+ 	glVertex2f(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
+ 	
+ 	glVertex2f(20.0, paddle1_x);
  	glVertex2f(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
  	glVertex2f(20.0, paddle1_x + PADDLE_HEIGHT);
  	glEnd();
     
  	// Player 02:
- 	glBegin(GL_QUADS);
+ 	glBegin(GL_TRIANGLES);
  	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
  	glVertex2f(WIDTH - 20.0, paddle2_x);
+ 	glVertex2f(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
+ 	
+ 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
  	glVertex2f(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
  	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x + PADDLE_HEIGHT);
  	glEnd();
 
- 	// Desenha a bola (quadrada clássica do Pong)
- 	glBegin(GL_QUADS);
+ 	// Desenha a bola usando GL_TRIANGLES
+ 	glBegin(GL_TRIANGLES);
  	glVertex2f(ball_x - BALL_RADIUS, ball_y - BALL_RADIUS);
  	glVertex2f(ball_x + BALL_RADIUS, ball_y - BALL_RADIUS);
  	glVertex2f(ball_x + BALL_RADIUS, ball_y + BALL_RADIUS);
+ 	
+ 	glVertex2f(ball_x - BALL_RADIUS, ball_y - BALL_RADIUS);
+ 	glVertex2f(ball_x + BALL_RADIUS, ball_y + BALL_RADIUS);
  	glVertex2f(ball_x - BALL_RADIUS, ball_y + BALL_RADIUS);
  	glEnd();
-
-    // Exibir os pontos e UI:
-#ifdef __EMSCRIPTEN__
-    EM_ASM({
-        if(window.updateUI) window.updateUI($0, $1, $2, $3);
-    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused);
-#endif
 
     glutSwapBuffers();
 }
