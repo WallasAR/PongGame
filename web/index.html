@@ -95,12 +95,13 @@
             bottom: 0;
             overflow: hidden;
             color: #aa0000;
-            font-size: 16px;
+            font-size: 24px;
             font-family: monospace;
-            line-height: 16px;
+            line-height: 32px;
+            letter-spacing: 5px;
             white-space: break-spaces;
             word-wrap: break-word;
-            opacity: 0.5;
+            opacity: 0.3;
             pointer-events: none;
             display: none;
             z-index: 5;
@@ -292,7 +293,7 @@
         let currentDy = 0;
         
         // Generate a lot of skulls for the text content
-        const skullPattern = " ☠ ".repeat(400);
+        const skullPattern = " ☠ ".repeat(150);
         document.getElementById('skull-left').innerText = skullPattern;
         document.getElementById('skull-right').innerText = skullPattern;
         
@@ -324,15 +325,22 @@
                 timerEl.innerText = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
                 
                 // Update Skull Zones
-                if (deadZoneWidth > 0) {
+                let timeToShrink = timerFrames % 1200;
+                let isWarning = (timeToShrink <= 180 && timerFrames > 0);
+                let currentDrawWidth = deadZoneWidth;
+                
+                if (isWarning) {
+                    currentDrawWidth += 60; // Show warning over the next shrinking area
+                }
+                
+                if (currentDrawWidth > 0) {
                     skullL.style.display = 'block';
                     skullR.style.display = 'block';
-                    skullL.style.width = (deadZoneWidth / 960 * 100) + '%';
-                    skullR.style.width = (deadZoneWidth / 960 * 100) + '%';
+                    skullL.style.width = (currentDrawWidth / 960 * 100) + '%';
+                    skullR.style.width = (currentDrawWidth / 960 * 100) + '%';
                     
                     // Flash skulls if it's about to shrink
-                    let timeToShrink = timerFrames % 1200;
-                    if (timeToShrink <= 180 && (timerFrames % 30) > 15) {
+                    if (isWarning && (timerFrames % 30) > 15) {
                         skullL.style.color = '#ff0000'; // Bright red
                         skullR.style.color = '#ff0000';
                         skullL.style.opacity = '1';
@@ -340,8 +348,8 @@
                     } else {
                         skullL.style.color = '#aa0000'; // Dark red
                         skullR.style.color = '#aa0000';
-                        skullL.style.opacity = '0.5';
-                        skullR.style.opacity = '0.5';
+                        skullL.style.opacity = '0.3';
+                        skullR.style.opacity = '0.3';
                     }
                 } else {
                     skullL.style.display = 'none';
