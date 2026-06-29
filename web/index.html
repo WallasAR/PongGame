@@ -84,10 +84,29 @@
         /* Wrapper para o canvas e overlays */
         .canvas-wrapper {
             position: relative;
-            display: inline-block; /* Ajusta perfeitamente ao conteudo sem esticar */
-            max-width: 100vw;
-            max-height: 80vh;
+            display: inline-block;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
+            margin-bottom: 20px;
         }
+
+        .skull-zone {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            overflow: hidden;
+            color: #aa0000;
+            font-size: 16px;
+            font-family: monospace;
+            line-height: 16px;
+            white-space: break-spaces;
+            word-wrap: break-word;
+            opacity: 0.5;
+            pointer-events: none;
+            display: none;
+            z-index: 5;
+            text-shadow: 0 0 5px #ff0000;
+        }
+
 
         /* O canvas gerado pelo emscripten */
         canvas.emscripten {
@@ -237,6 +256,10 @@
         <div id="loading">Carregando Jogo...</div>
         <div class="canvas-wrapper">
             <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1" aria-label="Game Canvas"></canvas>
+            
+            <div id="skull-left" class="skull-zone"></div>
+            <div id="skull-right" class="skull-zone" style="right: 0;"></div>
+            
             <pre id="ascii-ball"></pre>
         </div>
     </div>
@@ -268,7 +291,12 @@
         let currentDx = 0;
         let currentDy = 0;
         
-        window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall, dx, dy, spec1, spec2, timerFrames) {
+        // Generate a lot of skulls for the text content
+        const skullPattern = " ☠ ".repeat(400);
+        document.getElementById('skull-left').innerText = skullPattern;
+        document.getElementById('skull-right').innerText = skullPattern;
+        
+        window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall, dx, dy, spec1, spec2, timerFrames, deadZoneWidth) {
             if (score1 !== lastScore1) {
                 document.getElementById('score1').innerText = score1;
                 lastScore1 = score1;
@@ -285,14 +313,44 @@
             document.getElementById('special2').style.width = spec2 + '%';
             
             const timerEl = document.getElementById('game-timer');
+            const skullL = document.getElementById('skull-left');
+            const skullR = document.getElementById('skull-right');
+            
             if (timerFrames >= 0 && !isMenu) {
                 timerEl.style.display = 'block';
                 let totalSeconds = Math.floor(timerFrames / 60);
                 let m = Math.floor(totalSeconds / 60);
                 let s = totalSeconds % 60;
                 timerEl.innerText = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                
+                // Update Skull Zones
+                if (deadZoneWidth > 0) {
+                    skullL.style.display = 'block';
+                    skullR.style.display = 'block';
+                    skullL.style.width = (deadZoneWidth / 960 * 100) + '%';
+                    skullR.style.width = (deadZoneWidth / 960 * 100) + '%';
+                    
+                    // Flash skulls if it's about to shrink
+                    let timeToShrink = timerFrames % 1200;
+                    if (timeToShrink <= 180 && (timerFrames % 30) > 15) {
+                        skullL.style.color = '#ff0000'; // Bright red
+                        skullR.style.color = '#ff0000';
+                        skullL.style.opacity = '1';
+                        skullR.style.opacity = '1';
+                    } else {
+                        skullL.style.color = '#aa0000'; // Dark red
+                        skullR.style.color = '#aa0000';
+                        skullL.style.opacity = '0.5';
+                        skullR.style.opacity = '0.5';
+                    }
+                } else {
+                    skullL.style.display = 'none';
+                    skullR.style.display = 'none';
+                }
             } else {
                 timerEl.style.display = 'none';
+                skullL.style.display = 'none';
+                skullR.style.display = 'none';
             }
             
             currentDx = dx;

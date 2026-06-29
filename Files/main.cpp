@@ -212,8 +212,8 @@ void display()
     // Atualizar UI no Javascript independentemente do estado do jogo
 #ifdef __EMSCRIPTEN__
     EM_ASM({
-        if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
-    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1, ball_dx, ball_dy, (int)special_charge_1, (int)special_charge_2, (currentRules == DEAD_ZONE) ? dead_zone_timer : -1);
+        if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
+    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1, ball_dx, ball_dy, (int)special_charge_1, (int)special_charge_2, (currentRules == DEAD_ZONE) ? dead_zone_timer : -1, dead_zone_width);
 #endif
 
 	// Desenhando a mesa
@@ -238,21 +238,7 @@ void display()
         return;
     }
 	
-    // Draw Warning Zones if about to shrink
-    if (currentRules == DEAD_ZONE && dead_zone_timer > 0) {
-        int time_to_shrink = dead_zone_timer % 1200;
-        if (time_to_shrink <= 180 && (dead_zone_timer % 30) > 15) { // Last 3 seconds, blink
-            glColor3f(0.8f, 0.0f, 0.0f); // Bright red warning
-            glBegin(GL_TRIANGLES);
-            // Left warning zone
-            glVertex2f(dead_zone_width, 0); glVertex2f(dead_zone_width + 60, 0); glVertex2f(dead_zone_width + 60, HEIGHT);
-            glVertex2f(dead_zone_width, 0); glVertex2f(dead_zone_width + 60, HEIGHT); glVertex2f(dead_zone_width, HEIGHT);
-            // Right warning zone
-            glVertex2f(WIDTH - dead_zone_width - 60, 0); glVertex2f(WIDTH - dead_zone_width, 0); glVertex2f(WIDTH - dead_zone_width, HEIGHT);
-            glVertex2f(WIDTH - dead_zone_width - 60, 0); glVertex2f(WIDTH - dead_zone_width, HEIGHT); glVertex2f(WIDTH - dead_zone_width - 60, HEIGHT);
-            glEnd();
-        }
-    }
+    // Draw Warning Zones if about to shrink - Removed as per user request to replace with ASCII skulls
 
 	// Linha central vertical tracejada (estilo Pong clássico)
 	glLineWidth(2.0);
