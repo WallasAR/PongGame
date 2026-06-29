@@ -181,7 +181,7 @@ void reshape(int w, int h)
     glViewport(0, 0, WIDTH, HEIGHT);
 }
 
-void loop_iteration()
+void update_physics()
 {
 	if (Gamepaused == false)
 	{	
@@ -270,14 +270,20 @@ void loop_iteration()
     	{
     	    paddle2_x += PADDLE_SPEED;
     	}
-
 	}
-    glutPostRedisplay();
 }
+
+#ifdef __EMSCRIPTEN__
+void emscripten_loop() {
+    update_physics();
+    display();
+}
+#endif
 
 void update(int value)
 {
-    loop_iteration();
+    update_physics();
+    glutPostRedisplay();
     glutTimerFunc(16, update, 0);
 }
 
@@ -297,8 +303,12 @@ int main(int argc, char **argv)
     
     init();
 
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(emscripten_loop, 0, 1);
+#else
     glutTimerFunc(0, update, 0);
     glutMainLoop();
+#endif
 
     return 0;
 }
