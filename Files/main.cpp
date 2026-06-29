@@ -36,6 +36,12 @@ bool Gamepaused = false;
 float Ball_speed_pause = BALL_SPEED;
 float Ball_speed_increment = 20;
 
+enum GameState { MENU, PLAYING };
+enum GameMode { PVP, PVE_EASY, PVE_MED, PVE_HARD };
+
+GameState currentState = MENU;
+GameMode currentMode = PVP;
+
 // Controle de teclado
 bool keys[256] = {false};
 bool specialKeys[256] = {false};
@@ -50,7 +56,18 @@ void init()
     gluOrtho2D(0, WIDTH, 0, HEIGHT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-}   
+}
+
+#ifndef __EMSCRIPTEN__
+// Funcao para desenhar texto usando bitmap (apenas nativo, emscripten usara HTML)
+void drawText(const char *text, float x, float y) {
+    glRasterPos2f(x, y);
+    while (*text) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *text);
+        text++;
+    }
+}
+#endif
 
 // Funcao de Pause 
 void pauseGame()
@@ -78,6 +95,15 @@ void resumeGame()
 void keyboard(unsigned char key, int x, int y) 
 {
     keys[key] = true;
+    
+    if (currentState == MENU) {
+        if (key == '1') { currentMode = PVP; currentState = PLAYING; score1 = 0; score2 = 0; ball_x = WIDTH/2; ball_y = HEIGHT/2; }
+        else if (key == '2') { currentMode = PVE_EASY; currentState = PLAYING; score1 = 0; score2 = 0; ball_x = WIDTH/2; ball_y = HEIGHT/2; }
+        else if (key == '3') { currentMode = PVE_MED; currentState = PLAYING; score1 = 0; score2 = 0; ball_x = WIDTH/2; ball_y = HEIGHT/2; }
+        else if (key == '4') { currentMode = PVE_HARD; currentState = PLAYING; score1 = 0; score2 = 0; ball_x = WIDTH/2; ball_y = HEIGHT/2; }
+        return;
+    }
+    
 	switch(key)
 	{
 	case 13: // 13 eh o ENTER
@@ -90,6 +116,10 @@ void keyboard(unsigned char key, int x, int y)
 			resumeGame();
 		}
 		break;
+	case 'm':
+	case 'M':
+	    currentState = MENU; // Voltar ao menu
+	    break;
 	case 27: // ESC
 #ifndef __EMSCRIPTEN__
 		exit(0);
@@ -115,6 +145,19 @@ void display()
 {
 	// Desenhando a mesa
     glClear(GL_COLOR_BUFFER_BIT);
+	
+	if (currentState == MENU) {
+#ifndef __EMSCRIPTEN__
+        glColor3f(1.0, 1.0, 1.0);
+        drawText("PONG", WIDTH / 2 - 25, HEIGHT / 2 + 100);
+        drawText("1. Player vs Player", WIDTH / 2 - 80, HEIGHT / 2 + 20);
+        drawText("2. Player vs AI (Easy)", WIDTH / 2 - 80, HEIGHT / 2 - 10);
+        drawText("3. Player vs AI (Medium)", WIDTH / 2 - 80, HEIGHT / 2 - 40);
+        drawText("4. Player vs AI (Hard)", WIDTH / 2 - 80, HEIGHT / 2 - 70);
+#endif
+        glutSwapBuffers();
+        return;
+    }
 	
 	// Linha central vertical tracejada (estilo Pong clássico)
 	glLineWidth(2.0);
@@ -165,11 +208,11 @@ void display()
  	glVertex2f(ball_x - BALL_RADIUS, ball_y + BALL_RADIUS);
  	glEnd();
 
-    // Exibir os pontos:
+    // Exibir os pontos e UI:
 #ifdef __EMSCRIPTEN__
     EM_ASM({
-        if(window.updateScore) window.updateScore($0, $1, $2);
-    }, score1, score2, Gamepaused);
+        if(window.updateUI) window.updateUI($0, $1, $2, $3);
+    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused);
 #endif
 
     glutSwapBuffers();
@@ -263,18 +306,50 @@ void update_physics()
     	}
     
     	// Player 02
-    	if (specialKeys[GLUT_KEY_DOWN] && paddle2_x > 0)
-		{
-    	    paddle2_x -= PADDLE_SPEED;
-    	}
-    	if (specialKeys[GLUT_KEY_UP] && paddle2_x < HEIGHT - PADDLE_HEIGHT)
-    	{
-    	    paddle2_x += PADDLE_SPEED;
+    	if (currentMode == PVP) {
+        	if (specialKeys[GLUT_KEY_DOWN] && paddle2_x > 0)
+    		{
+        	    paddle2_x -= PADDLE_SPEED;
+        	}
+        	if (specialKeys[GLUT_KEY_UP] && paddle2_x < HEIGHT - PADDLE_HEIGHT)
+        	{
+        	    paddle2_x += PADDLE_SPEED;
+        	}
+    	} else {
+    	    // AI Logic
+    	    float ai_speed = PADDLE_SPEED;
+    	    float react_x = 0;
+    	    if (currentMode == PVE_EASY) { ai_speed = PADDLE_SPEED * 0.4f; react_x = WIDTH / 2.0f; }
+    	    else if (currentMode == PVE_MED) { ai_speed = PADDLE_SPEED * 0.7f; react_x = WIDTH / 4.0f; }
+    	    else if (currentMode == PVE_HARD) { ai_speed = PADDLE_SPEED * 1.1f; react_x = 0.0f; }
+    	    
+    	    if (ball_x > react_x) {
+        	    float paddle2_center = paddle2_x + PADDLE_HEIGHT / 2;
+        	    if (ball_y > paddle2_center + 10 && paddle2_x < HEIGHT - PADDLE_HEIGHT) {
+        	        paddle2_x += ai_speed;
+        	    } else if (ball_y < paddle2_center - 10 && paddle2_x > 0) {
+        	        paddle2_x -= ai_speed;
+        	    }
+    	    }
     	}
 	}
 }
 
 #ifdef __EMSCRIPTEN__
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE
+    void select_menu(int mode) {
+        if (mode == 1) currentMode = PVP;
+        else if (mode == 2) currentMode = PVE_EASY;
+        else if (mode == 3) currentMode = PVE_MED;
+        else if (mode == 4) currentMode = PVE_HARD;
+        
+        currentState = PLAYING;
+        score1 = 0; score2 = 0; 
+        ball_x = WIDTH/2; ball_y = HEIGHT/2;
+    }
+}
+
 void emscripten_loop() {
     update_physics();
     display();

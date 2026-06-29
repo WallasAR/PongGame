@@ -90,6 +90,40 @@
             transform: translate(-50%, -50%);
             font-size: 1.5rem;
         }
+        
+        /* Menu Overlay (Para uso no navegador) */
+        .menu-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            z-index: 10;
+        }
+        .menu-overlay h1 {
+            font-size: 4rem;
+            margin-bottom: 40px;
+            letter-spacing: 5px;
+        }
+        .menu-overlay button {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            padding: 15px 30px;
+            margin: 10px;
+            font-family: inherit;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 350px;
+            transition: all 0.2s;
+        }
+        .menu-overlay button:hover {
+            background: white;
+            color: black;
+        }
     </style>
 </head>
 <body>
@@ -108,6 +142,15 @@
                 <h2>Player 2</h2>
                 <div class="score" id="score2">0</div>
             </div>
+        </div>
+        
+        <!-- Menu HTML -->
+        <div id="menu-overlay" class="menu-overlay">
+            <h1>PONG</h1>
+            <button onclick="startGame(1)">1. Player vs Player</button>
+            <button onclick="startGame(2)">2. Player vs AI (Easy)</button>
+            <button onclick="startGame(3)">3. Player vs AI (Medium)</button>
+            <button onclick="startGame(4)">4. Player vs AI (Hard)</button>
         </div>
         
         <!-- Canvas para o OpenGL via Emscripten -->
@@ -133,10 +176,10 @@
     </div>
 
     <script>
-        // Função para atualizar o placar vindo do C++
+        // Função para atualizar o placar e UI vindo do C++
         let lastScore1 = 0;
         let lastScore2 = 0;
-        window.updateScore = function(score1, score2, isPaused) {
+        window.updateUI = function(score1, score2, isMenu, isPaused) {
             if (score1 !== lastScore1) {
                 document.getElementById('score1').innerText = score1;
                 lastScore1 = score1;
@@ -146,7 +189,15 @@
                 lastScore2 = score2;
             }
             document.getElementById('pause-indicator').style.display = isPaused ? 'block' : 'none';
+            document.getElementById('menu-overlay').style.display = isMenu ? 'flex' : 'none';
         };
+
+        function startGame(mode) {
+            // Chama a funçao C++ exportada para trocar o modo
+            if (Module && Module._select_menu) {
+                Module._select_menu(mode);
+            }
+        }
 
         // Funções de Audio via Web Audio API injetadas no emscripten
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();

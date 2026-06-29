@@ -8425,16 +8425,17 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('onCOSStore');
 }
 var ASM_CONSTS = {
-  68780: ($0, $1, $2) => { if(window.updateScore) window.updateScore($0, $1, $2); },  
- 68839: () => { if(window.playBeep) window.playBeep(400, 100); },  
- 68890: () => { if(window.playBeep) window.playBeep(400, 100); },  
- 68941: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
- 69069: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
- 69197: () => { if(window.playBeep) window.playBeep(600, 100); },  
- 69248: () => { if(window.playBeep) window.playBeep(600, 100); }
+  68780: ($0, $1, $2, $3) => { if(window.updateUI) window.updateUI($0, $1, $2, $3); },  
+ 68837: () => { if(window.playBeep) window.playBeep(400, 100); },  
+ 68888: () => { if(window.playBeep) window.playBeep(400, 100); },  
+ 68939: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
+ 69067: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
+ 69195: () => { if(window.playBeep) window.playBeep(600, 100); },  
+ 69246: () => { if(window.playBeep) window.playBeep(600, 100); }
 };
 
 // Imports from the Wasm binary.
+var _select_menu = Module['_select_menu'] = makeInvalidEarlyAccess('_select_menu');
 var _main = Module['_main'] = makeInvalidEarlyAccess('_main');
 var _fflush = makeInvalidEarlyAccess('_fflush');
 var _strerror = makeInvalidEarlyAccess('_strerror');
@@ -8452,6 +8453,7 @@ var wasmMemory = makeInvalidEarlyAccess('wasmMemory');
 var wasmTable = makeInvalidEarlyAccess('wasmTable');
 
 function assignWasmExports(wasmExports) {
+  assert(typeof wasmExports['select_menu'] != 'undefined', 'missing Wasm export: select_menu');
   assert(typeof wasmExports['__main_argc_argv'] != 'undefined', 'missing Wasm export: __main_argc_argv');
   assert(typeof wasmExports['fflush'] != 'undefined', 'missing Wasm export: fflush');
   assert(typeof wasmExports['strerror'] != 'undefined', 'missing Wasm export: strerror');
@@ -8465,6 +8467,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['emscripten_stack_get_current'] != 'undefined', 'missing Wasm export: emscripten_stack_get_current');
   assert(typeof wasmExports['memory'] != 'undefined', 'missing Wasm export: memory');
   assert(typeof wasmExports['__indirect_function_table'] != 'undefined', 'missing Wasm export: __indirect_function_table');
+  _select_menu = Module['_select_menu'] = createExportWrapper('select_menu', 1);
   _main = Module['_main'] = createExportWrapper('__main_argc_argv', 2);
   _fflush = createExportWrapper('fflush', 1);
   _strerror = createExportWrapper('strerror', 1);
