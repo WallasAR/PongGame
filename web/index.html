@@ -5,138 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Retro Neon Pong</title>
     <style>
-        :root {
-            --bg-color: #0d0d12;
-            --neon-blue: #00f3ff;
-            --neon-pink: #ff00ea;
-            --glass-bg: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-        }
-
-        body {
+        body, html {
             margin: 0;
             padding: 0;
-            background-color: var(--bg-color);
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #fff;
+            font-family: monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
             overflow: hidden;
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.15), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(255, 0, 234, 0.15), transparent 25%);
-        }
-
-        h1 {
-            font-size: 3rem;
-            text-transform: uppercase;
-            letter-spacing: 5px;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
-            animation: pulse 2s infinite alternate;
-        }
-
-        @keyframes pulse {
-            from { text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue); }
-            to { text-shadow: 0 0 15px var(--neon-blue), 0 0 30px var(--neon-blue), 0 0 40px var(--neon-blue); }
         }
 
         .game-container {
-            position: relative;
-            padding: 20px;
-            background: var(--glass-bg);
-            border-radius: 16px;
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 640px;
+            margin-bottom: 20px;
+        }
+
+        .score-box h2 {
+            margin: 0;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+
+        .score-box .score {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        #pause-indicator {
+            font-weight: bold;
+            display: none;
         }
 
         /* O canvas gerado pelo emscripten */
         canvas.emscripten {
             display: block;
-            border: 2px solid var(--neon-pink);
-            border-radius: 8px;
-            box-shadow: 0 0 15px var(--neon-pink);
+            border: 2px solid #fff;
             outline: none;
             background-color: #000;
-        }
-        
-        .scoreboard {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 640px; /* same as width of canvas */
-            margin-bottom: 20px;
-            padding: 10px 20px;
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            box-sizing: border-box;
-            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
-        }
-
-        .score-box {
-            text-align: center;
-        }
-
-        .score-box h2 {
-            margin: 0;
-            color: var(--neon-blue);
-            font-size: 1.2rem;
-            text-transform: uppercase;
-        }
-
-        .score-box .score {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: white;
-            text-shadow: 0 0 10px var(--neon-blue);
-        }
-
-        #pause-indicator {
-            color: var(--neon-pink);
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            animation: pulse 1s infinite alternate;
-            display: none;
+            /* To make it actually fullscreen we could use width/height 100% but it would stretch. Let's keep it centered or scale it. */
+            transform: scale(1.5);
+            transform-origin: center top;
         }
 
         .controls {
-            margin-top: 30px;
+            margin-top: 250px; /* Push below the scaled canvas */
             display: flex;
             gap: 40px;
             text-align: center;
-            background: var(--glass-bg);
-            padding: 15px 30px;
-            border-radius: 12px;
-            border: 1px solid var(--glass-border);
-        }
-
-        .player-controls h3 {
-            color: var(--neon-blue);
-            margin: 0 0 10px 0;
-            text-transform: uppercase;
         }
 
         .player-controls p {
             margin: 5px 0;
-            font-size: 0.9rem;
-            color: #ccc;
+            font-size: 0.8rem;
         }
 
         .key {
             display: inline-block;
-            background: rgba(255,255,255,0.1);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-            min-width: 20px;
+            border: 1px solid #fff;
+            padding: 2px 6px;
         }
 
         /* Overlay de Loading */
@@ -146,13 +89,12 @@
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 1.5rem;
-            color: var(--neon-blue);
         }
     </style>
 </head>
 <body>
 
-    <h1>Neon Pong</h1>
+
 
     <div class="game-container">
         <!-- Scoreboard HTML -->
@@ -179,11 +121,11 @@
             <p>Subir: <span class="key">W</span></p>
             <p>Descer: <span class="key">S</span></p>
         </div>
-        <div class="player-controls" style="border-left: 1px solid var(--glass-border); padding-left: 40px;">
+        <div class="player-controls" style="padding-left: 40px;">
             <h3>Geral</h3>
             <p>Pausar: <span class="key">Enter</span></p>
         </div>
-        <div class="player-controls" style="border-left: 1px solid var(--glass-border); padding-left: 40px;">
+        <div class="player-controls" style="padding-left: 40px;">
             <h3>Player 2</h3>
             <p>Subir: <span class="key">↑</span></p>
             <p>Descer: <span class="key">↓</span></p>

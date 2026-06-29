@@ -315,9 +315,7 @@ void loop_iteration()
 void update(int value)
 {
     loop_iteration();
-#ifndef __EMSCRIPTEN__
     glutTimerFunc(16, update, 0);
-#endif
 }
 
 int main(int argc, char **argv)
@@ -336,12 +334,8 @@ int main(int argc, char **argv)
     
     init();
 
-#ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(loop_iteration, 60, 1);
-#else
     glutTimerFunc(0, update, 0);
     glutMainLoop();
-#endif
 
     return 0;
 }
