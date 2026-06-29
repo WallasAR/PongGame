@@ -319,15 +319,15 @@ void update_physics()
 	            currentState = MENU;
 	        }
 	        
+	        left_boundary = 0;
+	        right_boundary = WIDTH;
+	        
 	        if (currentRules == DEAD_ZONE) {
 	            if (dead_zone_timer > 0) dead_zone_timer--;
 	            else {
 	                left_boundary = 80;
 	                right_boundary = WIDTH - 80;
 	            }
-	        } else {
-	            left_boundary = 0;
-	            right_boundary = WIDTH;
 	        }
 	        
 	        // Process Abilities
