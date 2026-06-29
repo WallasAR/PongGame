@@ -138,45 +138,31 @@ void display()
     glVertex2f(WIDTH, 2.0);
     glEnd();
 		
- 	// Desenha as paletas usando GL_TRIANGLES para garantir compatibilidade com WebGL
- 	//Player 01:
- 	glBegin(GL_TRIANGLES);
+ 	// Desenha as paletas usando GL_QUADS
  	glColor3f(1.0, 1.0, 1.0);
+ 	
+ 	// Player 01:
+ 	glBegin(GL_QUADS);
  	glVertex2f(20.0, paddle1_x);
  	glVertex2f(PADDLE_WIDTH, paddle1_x);
  	glVertex2f(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
- 	
- 	glVertex2f(20.0, paddle1_x);
- 	glVertex2f(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
  	glVertex2f(20.0, paddle1_x + PADDLE_HEIGHT);
+ 	glEnd();
     
  	// Player 02:
+ 	glBegin(GL_QUADS);
  	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
  	glVertex2f(WIDTH - 20.0, paddle2_x);
- 	glVertex2f(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
- 	
- 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
  	glVertex2f(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
  	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x + PADDLE_HEIGHT);
  	glEnd();
 
- 	// Desenha a bola usando GL_TRIANGLES (aproximando um circulo)
- 	glBegin(GL_TRIANGLES);
- 	glColor3f(1.0, 1.0, 1.0);
-  	for (float angle = 0.0; angle <= 360.0; angle += 10.0)
-  	{
-		float radian = angle * 3.1416 / 180.0;
-		float next_radian = (angle + 10.0) * 3.1416 / 180.0;
-		
-		float x1 = ball_x + BALL_RADIUS * cos(radian);
-		float y1 = ball_y + BALL_RADIUS * sin(radian);
-		float x2 = ball_x + BALL_RADIUS * cos(next_radian);
-		float y2 = ball_y + BALL_RADIUS * sin(next_radian);
-		
-		glVertex2f(ball_x, ball_y); // Centro
-		glVertex2f(x1, y1);
-		glVertex2f(x2, y2);
- 	}
+ 	// Desenha a bola (quadrada clássica do Pong)
+ 	glBegin(GL_QUADS);
+ 	glVertex2f(ball_x - BALL_RADIUS, ball_y - BALL_RADIUS);
+ 	glVertex2f(ball_x + BALL_RADIUS, ball_y - BALL_RADIUS);
+ 	glVertex2f(ball_x + BALL_RADIUS, ball_y + BALL_RADIUS);
+ 	glVertex2f(ball_x - BALL_RADIUS, ball_y + BALL_RADIUS);
  	glEnd();
 
     // Exibir os pontos:
@@ -209,14 +195,14 @@ void update_physics()
 		{
     	   	ball_dx = -ball_dx;
 #ifdef __EMSCRIPTEN__
-            EM_ASM( if(window.playBeep) window.playBeep(400, 100); );
+            EM_ASM({ if(window.playBeep) window.playBeep(400, 100); });
 #endif
 		}
 		if (ball_y + BALL_RADIUS >= HEIGHT - 60 || ball_y - BALL_RADIUS <= 0)
 		{
     	   	ball_dy = -ball_dy;
 #ifdef __EMSCRIPTEN__
-            EM_ASM( if(window.playBeep) window.playBeep(400, 100); );
+            EM_ASM({ if(window.playBeep) window.playBeep(400, 100); });
 #endif
 		}
 	
@@ -225,7 +211,7 @@ void update_physics()
 		{
     		score1++;
 #ifdef __EMSCRIPTEN__
-            EM_ASM( if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); );
+            EM_ASM({ if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); });
 #endif
     		// reset para a bola voltar ao centro
     		ball_x = 320.0;
@@ -238,7 +224,7 @@ void update_physics()
 		{
     	   	score2++;
 #ifdef __EMSCRIPTEN__
-            EM_ASM( if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); );
+            EM_ASM({ if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); });
 #endif
     	   	// reset para a bola voltar ao centro
     	   	ball_x = 320.0;
@@ -254,14 +240,14 @@ void update_physics()
 			ball_dx += (ball_dx > 0 ? 0.5f : -0.5f); // Pequeno incremento de velocidade
 			ball_dy += (ball_dy > 0 ? 0.5f : -0.5f);
 #ifdef __EMSCRIPTEN__
-            EM_ASM( if(window.playBeep) window.playBeep(600, 100); );
+            EM_ASM({ if(window.playBeep) window.playBeep(600, 100); });
 #endif
 		}
 		else if ((ball_x >= WIDTH - PADDLE_WIDTH - 10 && ball_x <= WIDTH - 20) && (ball_y + BALL_RADIUS >= paddle2_x && ball_y - BALL_RADIUS <= paddle2_x + PADDLE_HEIGHT))
 		{
 		   	ball_dx = -ball_dx;
 #ifdef __EMSCRIPTEN__
-            EM_ASM( if(window.playBeep) window.playBeep(600, 100); );
+            EM_ASM({ if(window.playBeep) window.playBeep(600, 100); });
 #endif
 		}
 

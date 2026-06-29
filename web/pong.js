@@ -8425,24 +8425,24 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('onCOSStore');
 }
 var ASM_CONSTS = {
-  70876: ($0, $1, $2) => { if(window.updateScore) window.updateScore($0, $1, $2); },  
- 70935: () => { if(window.playBeep) window.playBeep(400, 100); },  
- 70982: () => { if(window.playBeep) window.playBeep(400, 100); },  
- 71029: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
- 71153: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
- 71277: () => { if(window.playBeep) window.playBeep(600, 100); },  
- 71324: () => { if(window.playBeep) window.playBeep(600, 100); }
+  68780: ($0, $1, $2) => { if(window.updateScore) window.updateScore($0, $1, $2); },  
+ 68839: () => { if(window.playBeep) window.playBeep(400, 100); },  
+ 68890: () => { if(window.playBeep) window.playBeep(400, 100); },  
+ 68941: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
+ 69069: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
+ 69197: () => { if(window.playBeep) window.playBeep(600, 100); },  
+ 69248: () => { if(window.playBeep) window.playBeep(600, 100); }
 };
 
 // Imports from the Wasm binary.
 var _main = Module['_main'] = makeInvalidEarlyAccess('_main');
 var _fflush = makeInvalidEarlyAccess('_fflush');
 var _strerror = makeInvalidEarlyAccess('_strerror');
+var _emscripten_stack_get_end = makeInvalidEarlyAccess('_emscripten_stack_get_end');
+var _emscripten_stack_get_base = makeInvalidEarlyAccess('_emscripten_stack_get_base');
 var _malloc = makeInvalidEarlyAccess('_malloc');
 var _emscripten_stack_init = makeInvalidEarlyAccess('_emscripten_stack_init');
 var _emscripten_stack_get_free = makeInvalidEarlyAccess('_emscripten_stack_get_free');
-var _emscripten_stack_get_base = makeInvalidEarlyAccess('_emscripten_stack_get_base');
-var _emscripten_stack_get_end = makeInvalidEarlyAccess('_emscripten_stack_get_end');
 var __emscripten_stack_restore = makeInvalidEarlyAccess('__emscripten_stack_restore');
 var __emscripten_stack_alloc = makeInvalidEarlyAccess('__emscripten_stack_alloc');
 var _emscripten_stack_get_current = makeInvalidEarlyAccess('_emscripten_stack_get_current');
@@ -8455,11 +8455,11 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['__main_argc_argv'] != 'undefined', 'missing Wasm export: __main_argc_argv');
   assert(typeof wasmExports['fflush'] != 'undefined', 'missing Wasm export: fflush');
   assert(typeof wasmExports['strerror'] != 'undefined', 'missing Wasm export: strerror');
+  assert(typeof wasmExports['emscripten_stack_get_end'] != 'undefined', 'missing Wasm export: emscripten_stack_get_end');
+  assert(typeof wasmExports['emscripten_stack_get_base'] != 'undefined', 'missing Wasm export: emscripten_stack_get_base');
   assert(typeof wasmExports['malloc'] != 'undefined', 'missing Wasm export: malloc');
   assert(typeof wasmExports['emscripten_stack_init'] != 'undefined', 'missing Wasm export: emscripten_stack_init');
   assert(typeof wasmExports['emscripten_stack_get_free'] != 'undefined', 'missing Wasm export: emscripten_stack_get_free');
-  assert(typeof wasmExports['emscripten_stack_get_base'] != 'undefined', 'missing Wasm export: emscripten_stack_get_base');
-  assert(typeof wasmExports['emscripten_stack_get_end'] != 'undefined', 'missing Wasm export: emscripten_stack_get_end');
   assert(typeof wasmExports['_emscripten_stack_restore'] != 'undefined', 'missing Wasm export: _emscripten_stack_restore');
   assert(typeof wasmExports['_emscripten_stack_alloc'] != 'undefined', 'missing Wasm export: _emscripten_stack_alloc');
   assert(typeof wasmExports['emscripten_stack_get_current'] != 'undefined', 'missing Wasm export: emscripten_stack_get_current');
@@ -8468,11 +8468,11 @@ function assignWasmExports(wasmExports) {
   _main = Module['_main'] = createExportWrapper('__main_argc_argv', 2);
   _fflush = createExportWrapper('fflush', 1);
   _strerror = createExportWrapper('strerror', 1);
+  _emscripten_stack_get_end = wasmExports['emscripten_stack_get_end'];
+  _emscripten_stack_get_base = wasmExports['emscripten_stack_get_base'];
   _malloc = createExportWrapper('malloc', 1);
   _emscripten_stack_init = wasmExports['emscripten_stack_init'];
   _emscripten_stack_get_free = wasmExports['emscripten_stack_get_free'];
-  _emscripten_stack_get_base = wasmExports['emscripten_stack_get_base'];
-  _emscripten_stack_get_end = wasmExports['emscripten_stack_get_end'];
   __emscripten_stack_restore = wasmExports['_emscripten_stack_restore'];
   __emscripten_stack_alloc = wasmExports['_emscripten_stack_alloc'];
   _emscripten_stack_get_current = wasmExports['emscripten_stack_get_current'];
