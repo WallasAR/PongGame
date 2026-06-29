@@ -94,18 +94,31 @@
             top: 0;
             bottom: 0;
             overflow: hidden;
+            display: none;
+            z-index: 5;
+            pointer-events: none;
+        }
+        .skull-inner {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
             color: #aa0000;
-            font-size: 24px;
+            font-size: 48px;
             font-family: monospace;
-            line-height: 32px;
-            letter-spacing: 5px;
+            line-height: 56px;
+            letter-spacing: 20px;
             white-space: break-spaces;
             word-wrap: break-word;
             opacity: 0.3;
-            pointer-events: none;
-            display: none;
-            z-index: 5;
-            text-shadow: 0 0 5px #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+            transform: rotate(45deg);
+            display: flex;
+            align-content: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            text-align: center;
         }
 
 
@@ -258,8 +271,8 @@
         <div class="canvas-wrapper">
             <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1" aria-label="Game Canvas"></canvas>
             
-            <div id="skull-left" class="skull-zone"></div>
-            <div id="skull-right" class="skull-zone" style="right: 0;"></div>
+            <div id="skull-left" class="skull-zone"><div class="skull-inner" id="skull-inner-l"></div></div>
+            <div id="skull-right" class="skull-zone" style="right: 0;"><div class="skull-inner" id="skull-inner-r"></div></div>
             
             <pre id="ascii-ball"></pre>
         </div>
@@ -294,8 +307,8 @@
         
         // Generate a lot of skulls for the text content
         const skullPattern = " ☠ ".repeat(150);
-        document.getElementById('skull-left').innerText = skullPattern;
-        document.getElementById('skull-right').innerText = skullPattern;
+        document.getElementById('skull-inner-l').innerText = skullPattern;
+        document.getElementById('skull-inner-r').innerText = skullPattern;
         
         window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall, dx, dy, spec1, spec2, timerFrames, deadZoneWidth) {
             if (score1 !== lastScore1) {
@@ -316,6 +329,8 @@
             const timerEl = document.getElementById('game-timer');
             const skullL = document.getElementById('skull-left');
             const skullR = document.getElementById('skull-right');
+            const skullInnerL = document.getElementById('skull-inner-l');
+            const skullInnerR = document.getElementById('skull-inner-r');
             
             if (timerFrames >= 0 && !isMenu) {
                 timerEl.style.display = 'block';
@@ -341,15 +356,15 @@
                     
                     // Flash skulls if it's about to shrink
                     if (isWarning && (timerFrames % 30) > 15) {
-                        skullL.style.color = '#ff0000'; // Bright red
-                        skullR.style.color = '#ff0000';
-                        skullL.style.opacity = '1';
-                        skullR.style.opacity = '1';
+                        skullInnerL.style.color = '#ff0000'; // Bright red
+                        skullInnerR.style.color = '#ff0000';
+                        skullInnerL.style.opacity = '1';
+                        skullInnerR.style.opacity = '1';
                     } else {
-                        skullL.style.color = '#aa0000'; // Dark red
-                        skullR.style.color = '#aa0000';
-                        skullL.style.opacity = '0.3';
-                        skullR.style.opacity = '0.3';
+                        skullInnerL.style.color = '#aa0000'; // Dark red
+                        skullInnerR.style.color = '#aa0000';
+                        skullInnerL.style.opacity = '0.3';
+                        skullInnerR.style.opacity = '0.3';
                     }
                 } else {
                     skullL.style.display = 'none';
