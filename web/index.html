@@ -78,12 +78,13 @@
             font-family: monospace;
             font-size: 8px;
             line-height: 8px;
-            color: #fff;
+            color: #fff; /* Volta a ser branco como o original */
             font-weight: bold;
-            transform: translate(-50%, 50%); /* Center on the coordinate, OpenGL Y is inverted visually */
+            transform: translate(-50%, 50%) scale(0.4); 
             pointer-events: none;
             margin: 0;
             text-align: center;
+            text-shadow: 0 0 5px #fff; 
         }
 
         .controls {
@@ -205,8 +206,10 @@
         let lastScore1 = 0;
         let lastScore2 = 0;
         let isBallVisible = true;
+        let currentDx = 0;
+        let currentDy = 0;
         
-        window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall) {
+        window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall, dx, dy) {
             if (score1 !== lastScore1) {
                 document.getElementById('score1').innerText = score1;
                 lastScore1 = score1;
@@ -217,6 +220,9 @@
             }
             document.getElementById('pause-indicator').style.display = isPaused ? 'block' : 'none';
             document.getElementById('menu-overlay').style.display = isMenu ? 'flex' : 'none';
+            
+            currentDx = dx;
+            currentDy = dy;
             
             // Atualizar posicao da bola ASCII
             const asciiBall = document.getElementById('ascii-ball');
@@ -288,24 +294,56 @@
             noise.start();
         };
 
+        // Matrizes e rotacoes para a Fisica 3D da bola
+        let ballRotMat = [1,0,0, 0,1,0, 0,0,1];
+        function matMult(A, B) {
+            return [
+                A[0]*B[0]+A[1]*B[3]+A[2]*B[6], A[0]*B[1]+A[1]*B[4]+A[2]*B[7], A[0]*B[2]+A[1]*B[5]+A[2]*B[8],
+                A[3]*B[0]+A[4]*B[3]+A[5]*B[6], A[3]*B[1]+A[4]*B[4]+A[5]*B[7], A[3]*B[2]+A[4]*B[5]+A[5]*B[8],
+                A[6]*B[0]+A[7]*B[3]+A[8]*B[6], A[6]*B[1]+A[7]*B[4]+A[8]*B[7], A[6]*B[2]+A[7]*B[5]+A[8]*B[8]
+            ];
+        }
+        function axisAngleMat(ax, ay, az, theta) {
+            let c = Math.cos(theta), s = Math.sin(theta), t = 1 - c;
+            let len = Math.sqrt(ax*ax + ay*ay + az*az);
+            if(len < 0.0001) return [1,0,0, 0,1,0, 0,0,1];
+            ax /= len; ay /= len; az /= len;
+            return [
+                t*ax*ax + c,    t*ax*ay - s*az, t*ax*az + s*ay,
+                t*ax*ay + s*az, t*ay*ay + c,    t*ay*az - s*ax,
+                t*ax*az - s*ay, t*ay*az + s*ax, t*az*az + c
+            ];
+        }
+
         // ASCII 3D Sphere Generator
-        let sphereAngle = 0;
         const asciiChars = " .,-~:;=!*#$@";
         function renderAsciiSphere() {
-            const r = 8; // Raio em caracteres
-            const width = 32; // Ajuste para o aspect-ratio da fonte monoespacada
-            const height = 16;
+            const r = 6; // Reduzido pela metade para ficar do tamanho exato da bola original
+            const width = 24; 
+            const height = 12;
             
-            sphereAngle += 0.05; // Velocidade de rotacao da luz
+            // Fisica da rotacao: Se move para (dx, dy), gira no eixo (-dy, dx)
+            let speed = Math.sqrt(currentDx*currentDx + currentDy*currentDy);
+            if (speed > 0) {
+                // Aumenta a velocidade de rotacao proporcional ao movimento
+                let dTheta = speed * 0.15; // Girar mais rapido por causa do tamanho menor
+                let R = axisAngleMat(-currentDy, currentDx, 0, dTheta);
+                ballRotMat = matMult(R, ballRotMat);
+            }
             
-            // Fonte de luz girando ao redor da esfera
-            let Lx = Math.cos(sphereAngle);
-            let Ly = -0.5; // Luz levemente de cima
-            let Lz = Math.sin(sphereAngle) - 1.5; // Luz na frente da esfera
-            
-            // Normalizar vetor da luz
+            // Fonte de luz fixa na cena (como um holofote de fliperama)
+            let Lx = 0.5;
+            let Ly = -1.0;
+            let Lz = -1.0;
             let L_len = Math.sqrt(Lx*Lx + Ly*Ly + Lz*Lz);
             Lx /= L_len; Ly /= L_len; Lz /= L_len;
+            
+            // Inversa da matriz ortogonal eh a sua transposta
+            let invM = [
+                ballRotMat[0], ballRotMat[3], ballRotMat[6],
+                ballRotMat[1], ballRotMat[4], ballRotMat[7],
+                ballRotMat[2], ballRotMat[5], ballRotMat[8]
+            ];
             
             let html = "";
             for (let y = -height/2; y < height/2; y++) {
@@ -314,16 +352,29 @@
                     let sq = adj_x*adj_x + y*y;
                     if (sq <= r*r) {
                         let z = Math.sqrt(r*r - sq);
-                        // Vetor Normal da superficie da esfera
+                        // Vetor Normal da superficie da esfera na visao da camera
                         let Nx = adj_x / r;
                         let Ny = y / r;
                         let Nz = z / r;
                         
-                        // Calculo de Iluminacao (Dot product N . L)
+                        // Rotaciona a normal de volta para o espaco local da bola para calcular a textura
+                        let Px = invM[0]*Nx + invM[1]*Ny + invM[2]*Nz;
+                        let Py = invM[3]*Nx + invM[4]*Ny + invM[5]*Nz;
+                        let Pz = invM[6]*Nx + invM[7]*Ny + invM[8]*Nz;
+                        
+                        // Textura xadrez 3D para dar ilusao incrivel de rotacao
+                        let u = Math.atan2(Px, Pz);
+                        let v = Math.asin(Py);
+                        let checks = (Math.sin(u * 8) * Math.sin(v * 8) > 0) ? 1.0 : 0.3;
+                        
+                        // Calculo de Iluminacao pura (Dot product N . L) - depende da camera, nao da textura!
                         let lum = -(Nx*Lx + Ny*Ly + Nz*Lz); 
                         if (lum < 0) lum = 0;
                         
-                        let charIdx = Math.floor(lum * (asciiChars.length - 1));
+                        // Combina a iluminacao do ambiente com a textura local da bola
+                        let final_lum = (0.2 + lum * 0.8) * checks;
+                        
+                        let charIdx = Math.floor(final_lum * (asciiChars.length - 1));
                         if(charIdx >= asciiChars.length) charIdx = asciiChars.length - 1;
                         html += asciiChars[charIdx];
                     } else {
@@ -386,7 +437,7 @@
             };
         };
     </script>
-    <!-- O script gerado pelo emscripten -->
-    <script async type="text/javascript" src="pong.js"></script>
+    <!-- O script gerado pelo emscripten com cache-busting -->
+    <script async type="text/javascript" src="pong.js?v=3"></script>
 </body>
 </html>
