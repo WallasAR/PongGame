@@ -16,7 +16,7 @@
 #define WIDTH 960
 #define HEIGHT 500
 #define PADDLE_HEIGHT 80
-#define PADDLE_WIDTH 35
+#define PADDLE_WIDTH 15
 #define PADDLE_SPEED 10
 #define BALL_RADIUS 10
 #define BALL_SPEED 3
@@ -264,12 +264,12 @@ void display()
     glLineWidth(4.0);
     glBegin(GL_LINES);
 	// Linha topo
-    glVertex2f(0.0, HEIGHT - 2.0);
-    glVertex2f(WIDTH, HEIGHT - 2.0);
+    glVertex2f((currentRules == DEAD_ZONE) ? dead_zone_width : 0.0, HEIGHT - 2.0);
+    glVertex2f((currentRules == DEAD_ZONE) ? WIDTH - dead_zone_width : WIDTH, HEIGHT - 2.0);
     
     // Linha debaixo
-    glVertex2f(0.0, 2.0);
-    glVertex2f(WIDTH, 2.0);
+    glVertex2f((currentRules == DEAD_ZONE) ? dead_zone_width : 0.0, 2.0);
+    glVertex2f((currentRules == DEAD_ZONE) ? WIDTH - dead_zone_width : WIDTH, 2.0);
     glEnd();
 		
  	// Desenha as paletas usando GL_TRIANGLES para compatibilidade WebGL
@@ -356,7 +356,6 @@ void update_physics()
 	                    // Just shrunk! Trigger explosion in both zones
 	                    if (dead_zone_width < 240) {
 	                        initDoubleWallExplosion(dead_zone_width, WIDTH - dead_zone_width - 60, 60);
-	                        shake_frames = 15;
 #ifdef __EMSCRIPTEN__
                             EM_ASM({ if(window.playExplosion) window.playExplosion(); });
 #endif
@@ -424,15 +423,17 @@ void update_physics()
     	    }
     	}
 
+        // Atualizar Particulas sempre (independente do shake pause)
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+            if (particles[i].life > 0) {
+                particles[i].x += particles[i].dx;
+                particles[i].y += particles[i].dy;
+                particles[i].life--;
+            }
+        }
+
 	    if (shake_frames > 0) {
 	        shake_frames--;
-            for (int i = 0; i < NUM_PARTICLES; i++) {
-                if (particles[i].life > 0) {
-                    particles[i].x += particles[i].dx;
-                    particles[i].y += particles[i].dy;
-                    particles[i].life--;
-                }
-            }
             if (shake_frames == 0) {
                 respawn_delay_frames = 60 - (dead_zone_width / 6); // Max 60, Min 20
             }
