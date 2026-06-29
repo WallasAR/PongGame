@@ -171,8 +171,8 @@ void display()
     // Atualizar UI no Javascript independentemente do estado do jogo
 #ifdef __EMSCRIPTEN__
     EM_ASM({
-        if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6);
-    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1);
+        if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6, $7, $8);
+    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1, ball_dx, ball_dy);
 #endif
 
 	// Desenhando a mesa
