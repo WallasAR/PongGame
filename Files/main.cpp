@@ -13,7 +13,7 @@
 #endif
 
 // parametros pre-definidos:
-#define WIDTH 640
+#define WIDTH 960
 #define HEIGHT 500
 #define PADDLE_HEIGHT 80
 #define PADDLE_WIDTH 35
@@ -26,8 +26,10 @@
 float left_boundary = WIDTH;
 float right_boundary = WIDTH * 2;
 int score1 = 0, score2 = 0;
-float paddle1_x = HEIGHT / 2 - PADDLE_HEIGHT / 2;
-float paddle2_x = HEIGHT / 2 - PADDLE_HEIGHT / 2;
+float paddle1_y = HEIGHT / 2 - PADDLE_HEIGHT / 2;
+float paddle2_y = HEIGHT / 2 - PADDLE_HEIGHT / 2;
+float paddle1_x = 20.0f;
+float paddle2_x = WIDTH - 20.0f - PADDLE_WIDTH;
 float ball_x = WIDTH / 2;
 float ball_y = HEIGHT / 2;
 float ball_dx = BALL_SPEED;
@@ -45,7 +47,8 @@ GameMode currentMode = PVP;
 GameRules currentRules = CLASSIC;
 
 int match_timer = 0;
-int dead_zone_timer = 3600; // 60 seconds
+int dead_zone_timer = 7200; // 120 seconds
+int dead_zone_width = 0;
 float special_charge_1 = 0;
 float special_charge_2 = 0;
 bool p1_fireball_active = false;
@@ -184,8 +187,8 @@ void display()
     // Atualizar UI no Javascript independentemente do estado do jogo
 #ifdef __EMSCRIPTEN__
     EM_ASM({
-        if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
-    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1, ball_dx, ball_dy, (int)special_charge_1, (int)special_charge_2);
+        if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1, ball_dx, ball_dy, (int)special_charge_1, (int)special_charge_2, (currentRules == DEAD_ZONE) ? dead_zone_timer : -1);
 #endif
 
 	// Desenhando a mesa
@@ -211,15 +214,15 @@ void display()
     }
 	
     // Draw Dead Zones if active
-    if (currentRules == DEAD_ZONE && dead_zone_timer <= 0) {
+    if (currentRules == DEAD_ZONE && dead_zone_width > 0) {
         glColor3f(0.5, 0.0, 0.0);
         glBegin(GL_TRIANGLES);
         // Left dead zone
-        glVertex2f(0, 0); glVertex2f(80, 0); glVertex2f(80, HEIGHT);
-        glVertex2f(0, 0); glVertex2f(80, HEIGHT); glVertex2f(0, HEIGHT);
+        glVertex2f(0, 0); glVertex2f(dead_zone_width, 0); glVertex2f(dead_zone_width, HEIGHT);
+        glVertex2f(0, 0); glVertex2f(dead_zone_width, HEIGHT); glVertex2f(0, HEIGHT);
         // Right dead zone
-        glVertex2f(WIDTH - 80, 0); glVertex2f(WIDTH, 0); glVertex2f(WIDTH, HEIGHT);
-        glVertex2f(WIDTH - 80, 0); glVertex2f(WIDTH, HEIGHT); glVertex2f(WIDTH - 80, HEIGHT);
+        glVertex2f(WIDTH - dead_zone_width, 0); glVertex2f(WIDTH, 0); glVertex2f(WIDTH, HEIGHT);
+        glVertex2f(WIDTH - dead_zone_width, 0); glVertex2f(WIDTH, HEIGHT); glVertex2f(WIDTH - dead_zone_width, HEIGHT);
         glEnd();
     }
 
@@ -250,24 +253,24 @@ void display()
  	
  	// Player 01:
  	glBegin(GL_TRIANGLES);
- 	glVertex2f(20.0, paddle1_x);
- 	glVertex2f(PADDLE_WIDTH, paddle1_x);
- 	glVertex2f(PADDLE_WIDTH, paddle1_x + paddle1_height);
+ 	glVertex2f(paddle1_x, paddle1_y);
+ 	glVertex2f(paddle1_x + PADDLE_WIDTH, paddle1_y);
+ 	glVertex2f(paddle1_x + PADDLE_WIDTH, paddle1_y + paddle1_height);
  	
- 	glVertex2f(20.0, paddle1_x);
- 	glVertex2f(PADDLE_WIDTH, paddle1_x + paddle1_height);
- 	glVertex2f(20.0, paddle1_x + paddle1_height);
+ 	glVertex2f(paddle1_x, paddle1_y);
+ 	glVertex2f(paddle1_x + PADDLE_WIDTH, paddle1_y + paddle1_height);
+ 	glVertex2f(paddle1_x, paddle1_y + paddle1_height);
  	glEnd();
     
  	// Player 02:
  	glBegin(GL_TRIANGLES);
- 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
- 	glVertex2f(WIDTH - 20.0, paddle2_x);
- 	glVertex2f(WIDTH - 20.0, paddle2_x + paddle2_height);
+ 	glVertex2f(paddle2_x, paddle2_y);
+ 	glVertex2f(paddle2_x + PADDLE_WIDTH, paddle2_y);
+ 	glVertex2f(paddle2_x + PADDLE_WIDTH, paddle2_y + paddle2_height);
  	
- 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
- 	glVertex2f(WIDTH - 20.0, paddle2_x + paddle2_height);
- 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x + paddle2_height);
+ 	glVertex2f(paddle2_x, paddle2_y);
+ 	glVertex2f(paddle2_x + PADDLE_WIDTH, paddle2_y + paddle2_height);
+ 	glVertex2f(paddle2_x, paddle2_y + paddle2_height);
  	glEnd();
 
     // Particulas
@@ -323,11 +326,18 @@ void update_physics()
 	        right_boundary = WIDTH;
 	        
 	        if (currentRules == DEAD_ZONE) {
-	            if (dead_zone_timer > 0) dead_zone_timer--;
-	            else {
-	                left_boundary = 80;
-	                right_boundary = WIDTH - 80;
+	            if (dead_zone_timer > 0) {
+	                dead_zone_timer--;
+	                dead_zone_width = ((7200 - dead_zone_timer) / 1200) * 60; // Every 1200 frames (20s) grows 60px
 	            }
+	            left_boundary = dead_zone_width;
+	            right_boundary = WIDTH - dead_zone_width;
+	            paddle1_x = 20.0f + dead_zone_width;
+	            paddle2_x = WIDTH - 20.0f - PADDLE_WIDTH - dead_zone_width;
+	        } else {
+	            paddle1_x = 20.0f;
+	            paddle2_x = WIDTH - 20.0f - PADDLE_WIDTH;
+	            dead_zone_width = 0;
 	        }
 	        
 	        // Process Abilities
@@ -346,20 +356,20 @@ void update_physics()
 	    
     	// Mover as paletas (sempre ativas, mesmo durante delays)
     	// Player 01
-    	if ((keys['s'] || keys['S']) && paddle1_x > 0) {
-    	    paddle1_x -= PADDLE_SPEED;
+    	if ((keys['s'] || keys['S']) && paddle1_y > 0) {
+    	    paddle1_y -= PADDLE_SPEED;
     	}
-    	if ((keys['w'] || keys['W']) && paddle1_x < HEIGHT - paddle1_height) {
-    	    paddle1_x += PADDLE_SPEED;
+    	if ((keys['w'] || keys['W']) && paddle1_y < HEIGHT - paddle1_height) {
+    	    paddle1_y += PADDLE_SPEED;
     	}
     
     	// Player 02
     	if (currentMode == PVP) {
-        	if (specialKeys[GLUT_KEY_DOWN] && paddle2_x > 0) {
-        	    paddle2_x -= PADDLE_SPEED;
+        	if (specialKeys[GLUT_KEY_DOWN] && paddle2_y > 0) {
+        	    paddle2_y -= PADDLE_SPEED;
         	}
-        	if (specialKeys[GLUT_KEY_UP] && paddle2_x < HEIGHT - paddle2_height) {
-        	    paddle2_x += PADDLE_SPEED;
+        	if (specialKeys[GLUT_KEY_UP] && paddle2_y < HEIGHT - paddle2_height) {
+        	    paddle2_y += PADDLE_SPEED;
         	}
     	} else {
     	    // AI Logic
@@ -370,11 +380,11 @@ void update_physics()
     	    else if (currentMode == PVE_HARD) { ai_speed = PADDLE_SPEED * 1.1f; react_x = 0.0f; }
     	    
     	    if (ball_x > react_x) {
-        	    float paddle2_center = paddle2_x + paddle2_height / 2;
-        	    if (ball_y > paddle2_center + 10 && paddle2_x < HEIGHT - paddle2_height) {
-        	        paddle2_x += ai_speed;
-        	    } else if (ball_y < paddle2_center - 10 && paddle2_x > 0) {
-        	        paddle2_x -= ai_speed;
+        	    float paddle2_center = paddle2_y + paddle2_height / 2;
+        	    if (ball_y > paddle2_center + 10 && paddle2_y < HEIGHT - paddle2_height) {
+        	        paddle2_y += ai_speed;
+        	    } else if (ball_y < paddle2_center - 10 && paddle2_y > 0) {
+        	        paddle2_y -= ai_speed;
         	    }
     	    }
     	}
@@ -439,7 +449,7 @@ void update_physics()
 		}
 
 		// Verifica colisao da bola com as paletas
-		if ((ball_x >= 20 && ball_x <= PADDLE_WIDTH + 10) && (ball_y + BALL_RADIUS >= paddle1_x && ball_y - BALL_RADIUS <= paddle1_x + paddle1_height))
+		if ((ball_x >= paddle1_x && ball_x <= paddle1_x + PADDLE_WIDTH + 10) && (ball_y + BALL_RADIUS >= paddle1_y && ball_y - BALL_RADIUS <= paddle1_y + paddle1_height))
 		{
 			ball_dx = -ball_dx;
 			ball_dx += (ball_dx > 0 ? 0.5f : -0.5f); // Pequeno incremento de velocidade
@@ -458,7 +468,7 @@ void update_physics()
             EM_ASM({ if(window.playBeep) window.playBeep(600, 100); });
 #endif
 		}
-		else if ((ball_x >= WIDTH - PADDLE_WIDTH - 10 && ball_x <= WIDTH - 20) && (ball_y + BALL_RADIUS >= paddle2_x && ball_y - BALL_RADIUS <= paddle2_x + paddle2_height))
+		else if ((ball_x >= paddle2_x - 10 && ball_x <= paddle2_x + PADDLE_WIDTH) && (ball_y + BALL_RADIUS >= paddle2_y && ball_y - BALL_RADIUS <= paddle2_y + paddle2_height))
 		{
 		   	ball_dx = -ball_dx;
 		   	
@@ -487,7 +497,8 @@ extern "C" {
         Gamepaused = false;
         score1 = 0; score2 = 0; 
         match_timer = 0;
-        dead_zone_timer = 3600;
+        dead_zone_timer = 7200;
+        dead_zone_width = 0;
         special_charge_1 = 0;
         special_charge_2 = 0;
         p1_fireball_active = false;
@@ -513,7 +524,7 @@ void emscripten_loop() {
     display();
     static int frameCount = 0;
     if (frameCount++ % 60 == 0) {
-        printf("Frame %d: ball(%.1f, %.1f), paddle1(%.1f), paddle2(%.1f)\n", frameCount, ball_x, ball_y, paddle1_x, paddle2_x);
+        printf("Frame %d: ball(%.1f, %.1f), paddle1(%.1f, %.1f), paddle2(%.1f, %.1f)\n", frameCount, ball_x, ball_y, paddle1_x, paddle1_y, paddle2_x, paddle2_y);
     }
 }
 #endif

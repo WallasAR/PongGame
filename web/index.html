@@ -97,7 +97,7 @@
             background-color: #000;
             max-width: 100vw;
             max-height: 80vh;
-            aspect-ratio: 640 / 500;
+            aspect-ratio: 960 / 500;
             object-fit: contain;
         }
 
@@ -182,6 +182,9 @@
 
 
     <div class="game-container">
+        <!-- Game Timer -->
+        <div id="game-timer" style="display:none; font-size: 2rem; color: #ff0055; text-align: center; margin-bottom: 10px; font-weight: bold; text-shadow: 0 0 10px #ff0055;">02:00</div>
+        
         <!-- Scoreboard HTML -->
         <div class="scoreboard" aria-live="polite">
             <div class="score-box">
@@ -265,7 +268,7 @@
         let currentDx = 0;
         let currentDy = 0;
         
-        window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall, dx, dy, spec1, spec2) {
+        window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall, dx, dy, spec1, spec2, timerFrames) {
             if (score1 !== lastScore1) {
                 document.getElementById('score1').innerText = score1;
                 lastScore1 = score1;
@@ -281,6 +284,17 @@
             document.getElementById('special1').style.width = spec1 + '%';
             document.getElementById('special2').style.width = spec2 + '%';
             
+            const timerEl = document.getElementById('game-timer');
+            if (timerFrames >= 0 && !isMenu) {
+                timerEl.style.display = 'block';
+                let totalSeconds = Math.floor(timerFrames / 60);
+                let m = Math.floor(totalSeconds / 60);
+                let s = totalSeconds % 60;
+                timerEl.innerText = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+            } else {
+                timerEl.style.display = 'none';
+            }
+            
             currentDx = dx;
             currentDy = dy;
             
@@ -290,7 +304,7 @@
                 asciiBall.style.display = 'none';
             } else {
                 asciiBall.style.display = 'block';
-                asciiBall.style.left = (bX / 640 * 100) + "%";
+                asciiBall.style.left = (bX / 960 * 100) + "%";
                 // OpenGL 0 is bottom, HTML 0 is top
                 asciiBall.style.bottom = (bY / 500 * 100) + "%";
             }
