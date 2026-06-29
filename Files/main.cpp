@@ -113,80 +113,43 @@ void display()
 	// Desenhando a mesa
     glClear(GL_COLOR_BUFFER_BIT);
 	
-    glColor3f(0.4, 0.7, 1.0);
-    glBegin(GL_QUADS);
-    glVertex2f(0.0, 0.0);
-    glVertex2f(WIDTH, 0.0);
-    glVertex2f(WIDTH, HEIGHT);
-    glVertex2f(0.0, HEIGHT);
-    glEnd();
-    
-    // Retangulo demarcador de pontos - Player 01
-    glColor3f(0.2, 0.5, 0.8);
-    glBegin(GL_QUADS);
-    glVertex2f(30.0, 450.0);
-    glVertex2f(WIDTH / 3 - 10, 450.0);
-    glVertex2f(WIDTH / 3 - 10, HEIGHT - 8);
-    glVertex2f(30.0, HEIGHT - 8);
-    glEnd();
-    
-    // Retangulo demarcador de pontos - Player 02
-	glColor3f(0.2, 0.5, 0.8);
-    glBegin(GL_QUADS);
-    glVertex2f(420.0, 450.0);
-    glVertex2f(WIDTH - 50, 450.0);
-    glVertex2f(WIDTH - 50, HEIGHT - 8);
-    glVertex2f(420.0, HEIGHT - 8);
-    glEnd();
-    
-	// Linha central vertical
+	// Linha central vertical tracejada (estilo Pong clássico)
 	glLineWidth(2.0);
     glColor3f(1.0, 1.0, 1.0);
     glBegin(GL_LINES);
-    glVertex2f(WIDTH / 2.0, 0.0);
-    glVertex2f(WIDTH / 2.0, HEIGHT - 60.0);
-    
-    // Linha central horizontal
-    glBegin(GL_LINES);
-    glVertex2f(0.0, HEIGHT / 2.0 - 30);
-	glVertex2f(WIDTH, HEIGHT / 2.0 - 30);
-    
-	// Linha topo
-    glVertex2f(0.0, HEIGHT / 2.0 + 190.0);
-    glVertex2f(WIDTH, HEIGHT / 2.0 + 190.0);
-    
-    // Linha debaixo
-    glVertex2f(0.0, HEIGHT / 2.0 - 249.0);
-    glVertex2f(WIDTH, HEIGHT / 2.0 - 249.0);
+    for(int i = 0; i < HEIGHT; i += 20) {
+        glVertex2f(WIDTH / 2.0, i);
+        glVertex2f(WIDTH / 2.0, i + 10);
+    }
     glEnd();
     
-	// Linha esquerda
-    glColor3f(1.0, 0.0, 0.0);
+	// Bordas superior e inferior brancas
     glLineWidth(4.0);
     glBegin(GL_LINES);
-    glVertex2f(0.0, HEIGHT / 2.0 - 500);
-    glVertex2f(0.0, HEIGHT / 2.0 + 188.0);
+	// Linha topo
+    glVertex2f(0.0, HEIGHT - 2.0);
+    glVertex2f(WIDTH, HEIGHT - 2.0);
     
-	// Linha direita
-    glVertex2f(WIDTH, HEIGHT / 2.0 - 500.0);
-    glVertex2f(WIDTH, HEIGHT / 2.0 + 188.0);
+    // Linha debaixo
+    glVertex2f(0.0, 2.0);
+    glVertex2f(WIDTH, 2.0);
     glEnd();
 		
  	// Desenha as paletas
  	//Player 01:
  	glBegin(GL_QUADS);
  	glColor3f(1.0, 1.0, 1.0);
- 	glVertex2i(20.0, paddle1_x);
- 	glVertex2i(PADDLE_WIDTH, paddle1_x);
- 	glVertex2i(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
- 	glVertex2i(20.0, paddle1_x + PADDLE_HEIGHT);
+ 	glVertex2f(20.0, paddle1_x);
+ 	glVertex2f(PADDLE_WIDTH, paddle1_x);
+ 	glVertex2f(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
+ 	glVertex2f(20.0, paddle1_x + PADDLE_HEIGHT);
     
  	// Player 02:
  	glColor3f(1.0, 1.0, 1.0);
- 	glVertex2i(WIDTH - PADDLE_WIDTH, paddle2_x);
- 	glVertex2i(WIDTH - 20.0, paddle2_x);
- 	glVertex2i(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
- 	glVertex2i(WIDTH - PADDLE_WIDTH, paddle2_x + PADDLE_HEIGHT);
+ 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
+ 	glVertex2f(WIDTH - 20.0, paddle2_x);
+ 	glVertex2f(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
+ 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x + PADDLE_HEIGHT);
  	glEnd();
 
  	// Desenha a bola:
