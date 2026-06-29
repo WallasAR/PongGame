@@ -292,6 +292,10 @@ void update_physics()
 void emscripten_loop() {
     update_physics();
     display();
+    static int frameCount = 0;
+    if (frameCount++ % 60 == 0) {
+        printf("Frame %d: ball(%.1f, %.1f), paddle1(%.1f), paddle2(%.1f)\n", frameCount, ball_x, ball_y, paddle1_x, paddle2_x);
+    }
 }
 #endif
 

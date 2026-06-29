@@ -59,13 +59,13 @@
             border: 2px solid #fff;
             outline: none;
             background-color: #000;
-            /* To make it actually fullscreen we could use width/height 100% but it would stretch. Let's keep it centered or scale it. */
-            transform: scale(1.5);
-            transform-origin: center top;
+            max-width: 100vw;
+            max-height: 80vh;
+            object-fit: contain;
         }
 
         .controls {
-            margin-top: 250px; /* Push below the scaled canvas */
+            margin-top: 30px;
             display: flex;
             gap: 40px;
             text-align: center;
