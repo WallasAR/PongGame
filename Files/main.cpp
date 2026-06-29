@@ -48,6 +48,7 @@ bool specialKeys[256] = {false};
 
 // Efeitos Arcade
 int shake_frames = 0;
+int respawn_delay_frames = 0;
 struct Particle {
     float x, y, dx, dy;
     int life;
@@ -285,6 +286,41 @@ void update_physics()
 {
 	if (Gamepaused == false)
 	{	
+    	// Mover as paletas (sempre ativas, mesmo durante delays)
+    	// Player 01
+    	if ((keys['s'] || keys['S']) && paddle1_x > 0) {
+    	    paddle1_x -= PADDLE_SPEED;
+    	}
+    	if ((keys['w'] || keys['W']) && paddle1_x < HEIGHT - PADDLE_HEIGHT) {
+    	    paddle1_x += PADDLE_SPEED;
+    	}
+    
+    	// Player 02
+    	if (currentMode == PVP) {
+        	if (specialKeys[GLUT_KEY_DOWN] && paddle2_x > 0) {
+        	    paddle2_x -= PADDLE_SPEED;
+        	}
+        	if (specialKeys[GLUT_KEY_UP] && paddle2_x < HEIGHT - PADDLE_HEIGHT) {
+        	    paddle2_x += PADDLE_SPEED;
+        	}
+    	} else {
+    	    // AI Logic
+    	    float ai_speed = PADDLE_SPEED;
+    	    float react_x = 0;
+    	    if (currentMode == PVE_EASY) { ai_speed = PADDLE_SPEED * 0.4f; react_x = WIDTH / 2.0f; }
+    	    else if (currentMode == PVE_MED) { ai_speed = PADDLE_SPEED * 0.7f; react_x = WIDTH / 4.0f; }
+    	    else if (currentMode == PVE_HARD) { ai_speed = PADDLE_SPEED * 1.1f; react_x = 0.0f; }
+    	    
+    	    if (ball_x > react_x) {
+        	    float paddle2_center = paddle2_x + PADDLE_HEIGHT / 2;
+        	    if (ball_y > paddle2_center + 10 && paddle2_x < HEIGHT - PADDLE_HEIGHT) {
+        	        paddle2_x += ai_speed;
+        	    } else if (ball_y < paddle2_center - 10 && paddle2_x > 0) {
+        	        paddle2_x -= ai_speed;
+        	    }
+    	    }
+    	}
+
 	    if (shake_frames > 0) {
 	        shake_frames--;
             for (int i = 0; i < NUM_PARTICLES; i++) {
@@ -294,7 +330,15 @@ void update_physics()
                     particles[i].life--;
                 }
             }
-            return; // Pause physical simulation while exploding
+            if (shake_frames == 0) {
+                respawn_delay_frames = 60; // 1 second delay at 60fps
+            }
+            return; // Pause ball physics while exploding
+	    }
+	    
+	    if (respawn_delay_frames > 0) {
+	        respawn_delay_frames--;
+	        return; // Pause ball physics while giving players time to prepare
 	    }
 	
     	// Mover a bola
@@ -365,45 +409,6 @@ void update_physics()
             EM_ASM({ if(window.playBeep) window.playBeep(600, 100); });
 #endif
 		}
-
-    	// Mover as paletas
-    	// Player 01
-    	if ((keys['s'] || keys['S']) && paddle1_x > 0)
-    	{
-    	    paddle1_x -= PADDLE_SPEED;
-    	}
-    	if ((keys['w'] || keys['W']) && paddle1_x < HEIGHT - PADDLE_HEIGHT)
-    	{
-    	    paddle1_x += PADDLE_SPEED;
-    	}
-    
-    	// Player 02
-    	if (currentMode == PVP) {
-        	if (specialKeys[GLUT_KEY_DOWN] && paddle2_x > 0)
-    		{
-        	    paddle2_x -= PADDLE_SPEED;
-        	}
-        	if (specialKeys[GLUT_KEY_UP] && paddle2_x < HEIGHT - PADDLE_HEIGHT)
-        	{
-        	    paddle2_x += PADDLE_SPEED;
-        	}
-    	} else {
-    	    // AI Logic
-    	    float ai_speed = PADDLE_SPEED;
-    	    float react_x = 0;
-    	    if (currentMode == PVE_EASY) { ai_speed = PADDLE_SPEED * 0.4f; react_x = WIDTH / 2.0f; }
-    	    else if (currentMode == PVE_MED) { ai_speed = PADDLE_SPEED * 0.7f; react_x = WIDTH / 4.0f; }
-    	    else if (currentMode == PVE_HARD) { ai_speed = PADDLE_SPEED * 1.1f; react_x = 0.0f; }
-    	    
-    	    if (ball_x > react_x) {
-        	    float paddle2_center = paddle2_x + PADDLE_HEIGHT / 2;
-        	    if (ball_y > paddle2_center + 10 && paddle2_x < HEIGHT - PADDLE_HEIGHT) {
-        	        paddle2_x += ai_speed;
-        	    } else if (ball_y < paddle2_center - 10 && paddle2_x > 0) {
-        	        paddle2_x -= ai_speed;
-        	    }
-    	    }
-    	}
 	}
 }
 
