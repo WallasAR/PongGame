@@ -38,9 +38,21 @@ float Ball_speed_increment = 20;
 
 enum GameState { MENU, PLAYING };
 enum GameMode { PVP, PVE_EASY, PVE_MED, PVE_HARD };
+enum GameRules { CLASSIC, DEAD_ZONE };
 
 GameState currentState = MENU;
 GameMode currentMode = PVP;
+GameRules currentRules = CLASSIC;
+
+int match_timer = 0;
+int dead_zone_timer = 3600; // 60 seconds
+float special_charge_1 = 0;
+float special_charge_2 = 0;
+bool p1_fireball_active = false;
+int p2_shield_frames = 0;
+
+float paddle1_height = PADDLE_HEIGHT;
+float paddle2_height = PADDLE_HEIGHT;
 
 // Controle de teclado
 bool keys[256] = {false};
@@ -172,8 +184,8 @@ void display()
     // Atualizar UI no Javascript independentemente do estado do jogo
 #ifdef __EMSCRIPTEN__
     EM_ASM({
-        if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6, $7, $8);
-    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1, ball_dx, ball_dy);
+        if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1, ball_dx, ball_dy, (int)special_charge_1, (int)special_charge_2);
 #endif
 
 	// Desenhando a mesa
@@ -198,6 +210,19 @@ void display()
         return;
     }
 	
+    // Draw Dead Zones if active
+    if (currentRules == DEAD_ZONE && dead_zone_timer <= 0) {
+        glColor3f(0.5, 0.0, 0.0);
+        glBegin(GL_TRIANGLES);
+        // Left dead zone
+        glVertex2f(0, 0); glVertex2f(80, 0); glVertex2f(80, HEIGHT);
+        glVertex2f(0, 0); glVertex2f(80, HEIGHT); glVertex2f(0, HEIGHT);
+        // Right dead zone
+        glVertex2f(WIDTH - 80, 0); glVertex2f(WIDTH, 0); glVertex2f(WIDTH, HEIGHT);
+        glVertex2f(WIDTH - 80, 0); glVertex2f(WIDTH, HEIGHT); glVertex2f(WIDTH - 80, HEIGHT);
+        glEnd();
+    }
+
 	// Linha central vertical tracejada (estilo Pong clássico)
 	glLineWidth(2.0);
     glColor3f(1.0, 1.0, 1.0);
@@ -227,22 +252,22 @@ void display()
  	glBegin(GL_TRIANGLES);
  	glVertex2f(20.0, paddle1_x);
  	glVertex2f(PADDLE_WIDTH, paddle1_x);
- 	glVertex2f(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
+ 	glVertex2f(PADDLE_WIDTH, paddle1_x + paddle1_height);
  	
  	glVertex2f(20.0, paddle1_x);
- 	glVertex2f(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
- 	glVertex2f(20.0, paddle1_x + PADDLE_HEIGHT);
+ 	glVertex2f(PADDLE_WIDTH, paddle1_x + paddle1_height);
+ 	glVertex2f(20.0, paddle1_x + paddle1_height);
  	glEnd();
     
  	// Player 02:
  	glBegin(GL_TRIANGLES);
  	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
  	glVertex2f(WIDTH - 20.0, paddle2_x);
- 	glVertex2f(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
+ 	glVertex2f(WIDTH - 20.0, paddle2_x + paddle2_height);
  	
  	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
- 	glVertex2f(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
- 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x + PADDLE_HEIGHT);
+ 	glVertex2f(WIDTH - 20.0, paddle2_x + paddle2_height);
+ 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x + paddle2_height);
  	glEnd();
 
     // Particulas
@@ -286,12 +311,45 @@ void update_physics()
 {
 	if (Gamepaused == false)
 	{	
+	    if (currentState == PLAYING) {
+	        match_timer++;
+	        
+	        // Check if Point limit reached (Classic)
+	        if (score1 >= 10 || score2 >= 10) {
+	            currentState = MENU;
+	        }
+	        
+	        if (currentRules == DEAD_ZONE) {
+	            if (dead_zone_timer > 0) dead_zone_timer--;
+	            else {
+	                left_boundary = 80;
+	                right_boundary = WIDTH - 80;
+	            }
+	        } else {
+	            left_boundary = 0;
+	            right_boundary = WIDTH;
+	        }
+	        
+	        // Process Abilities
+	        if (keys[' '] && special_charge_1 >= 100) {
+	            special_charge_1 = 0;
+	            p1_fireball_active = true;
+	        }
+	        if (keys['0'] && special_charge_2 >= 100) {
+	            special_charge_2 = 0;
+	            p2_shield_frames = 300; // 5 seconds
+	        }
+	        
+	        paddle2_height = (p2_shield_frames > 0) ? PADDLE_HEIGHT * 2 : PADDLE_HEIGHT;
+	        if (p2_shield_frames > 0) p2_shield_frames--;
+	    }
+	    
     	// Mover as paletas (sempre ativas, mesmo durante delays)
     	// Player 01
     	if ((keys['s'] || keys['S']) && paddle1_x > 0) {
     	    paddle1_x -= PADDLE_SPEED;
     	}
-    	if ((keys['w'] || keys['W']) && paddle1_x < HEIGHT - PADDLE_HEIGHT) {
+    	if ((keys['w'] || keys['W']) && paddle1_x < HEIGHT - paddle1_height) {
     	    paddle1_x += PADDLE_SPEED;
     	}
     
@@ -300,7 +358,7 @@ void update_physics()
         	if (specialKeys[GLUT_KEY_DOWN] && paddle2_x > 0) {
         	    paddle2_x -= PADDLE_SPEED;
         	}
-        	if (specialKeys[GLUT_KEY_UP] && paddle2_x < HEIGHT - PADDLE_HEIGHT) {
+        	if (specialKeys[GLUT_KEY_UP] && paddle2_x < HEIGHT - paddle2_height) {
         	    paddle2_x += PADDLE_SPEED;
         	}
     	} else {
@@ -312,8 +370,8 @@ void update_physics()
     	    else if (currentMode == PVE_HARD) { ai_speed = PADDLE_SPEED * 1.1f; react_x = 0.0f; }
     	    
     	    if (ball_x > react_x) {
-        	    float paddle2_center = paddle2_x + PADDLE_HEIGHT / 2;
-        	    if (ball_y > paddle2_center + 10 && paddle2_x < HEIGHT - PADDLE_HEIGHT) {
+        	    float paddle2_center = paddle2_x + paddle2_height / 2;
+        	    if (ball_y > paddle2_center + 10 && paddle2_x < HEIGHT - paddle2_height) {
         	        paddle2_x += ai_speed;
         	    } else if (ball_y < paddle2_center - 10 && paddle2_x > 0) {
         	        paddle2_x -= ai_speed;
@@ -362,9 +420,11 @@ void update_physics()
 		}
 	
 		// Marcador de pontuacao:
-		if (ball_x + BALL_RADIUS >= left_boundary || ball_x - BALL_RADIUS == 0) // Original logic was 'left' and 'right' but they were initialized differently
+		if (ball_x + BALL_RADIUS >= right_boundary || ball_x - BALL_RADIUS <= left_boundary)
 		{
-    		score1++;
+		    if (ball_x > WIDTH/2) score1++;
+		    else score2++;
+		    
             initExplosion(ball_x, ball_y);
             shake_frames = 30;
 #ifdef __EMSCRIPTEN__
@@ -373,38 +433,37 @@ void update_physics()
     		// reset para a bola voltar ao centro
     		ball_x = WIDTH/2;
     		ball_y = HEIGHT/2;
-    		ball_dx = BALL_SPEED;
-			ball_dy = BALL_SPEED;
-		}	
-
-		if (ball_x + BALL_RADIUS >= right_boundary || ball_x - BALL_RADIUS <= 0)
-		{
-    	   	score2++;
-            initExplosion(ball_x, ball_y);
-            shake_frames = 30;
-#ifdef __EMSCRIPTEN__
-            EM_ASM({ if(window.playExplosion) window.playExplosion(); });
-#endif
-    	   	// reset para a bola voltar ao centro
-    	   	ball_x = WIDTH/2;
-    	   	ball_y = HEIGHT/2;
-    		ball_dx = BALL_SPEED;
-			ball_dy = BALL_SPEED;
+    		ball_dx = BALL_SPEED * (ball_dx > 0 ? -1 : 1);
+			ball_dy = BALL_SPEED * (ball_dy > 0 ? 1 : -1);
+			p1_fireball_active = false;
 		}
 
 		// Verifica colisao da bola com as paletas
-		if ((ball_x >= 20 && ball_x <= PADDLE_WIDTH + 10) && (ball_y + BALL_RADIUS >= paddle1_x && ball_y - BALL_RADIUS <= paddle1_x + PADDLE_HEIGHT))
+		if ((ball_x >= 20 && ball_x <= PADDLE_WIDTH + 10) && (ball_y + BALL_RADIUS >= paddle1_x && ball_y - BALL_RADIUS <= paddle1_x + paddle1_height))
 		{
 			ball_dx = -ball_dx;
 			ball_dx += (ball_dx > 0 ? 0.5f : -0.5f); // Pequeno incremento de velocidade
 			ball_dy += (ball_dy > 0 ? 0.5f : -0.5f);
+			
+			if (p1_fireball_active) {
+			    ball_dx *= 1.5f;
+			    ball_dy *= 1.5f;
+			    p1_fireball_active = false;
+			}
+			
+			special_charge_1 += 20;
+			if (special_charge_1 > 100) special_charge_1 = 100;
+			
 #ifdef __EMSCRIPTEN__
             EM_ASM({ if(window.playBeep) window.playBeep(600, 100); });
 #endif
 		}
-		else if ((ball_x >= WIDTH - PADDLE_WIDTH - 10 && ball_x <= WIDTH - 20) && (ball_y + BALL_RADIUS >= paddle2_x && ball_y - BALL_RADIUS <= paddle2_x + PADDLE_HEIGHT))
+		else if ((ball_x >= WIDTH - PADDLE_WIDTH - 10 && ball_x <= WIDTH - 20) && (ball_y + BALL_RADIUS >= paddle2_x && ball_y - BALL_RADIUS <= paddle2_x + paddle2_height))
 		{
 		   	ball_dx = -ball_dx;
+		   	
+		   	special_charge_2 += 20;
+		   	if (special_charge_2 > 100) special_charge_2 = 100;
 #ifdef __EMSCRIPTEN__
             EM_ASM({ if(window.playBeep) window.playBeep(600, 100); });
 #endif
@@ -415,15 +474,37 @@ void update_physics()
 #ifdef __EMSCRIPTEN__
 extern "C" {
     EMSCRIPTEN_KEEPALIVE
-    void select_menu(int mode) {
-        if (mode == 1) currentMode = PVP;
-        else if (mode == 2) currentMode = PVE_EASY;
-        else if (mode == 3) currentMode = PVE_MED;
-        else if (mode == 4) currentMode = PVE_HARD;
+    void start_game(int rules, int opponent) {
+        if (rules == 0) currentRules = CLASSIC;
+        else if (rules == 1) currentRules = DEAD_ZONE;
+        
+        if (opponent == 1) currentMode = PVP;
+        else if (opponent == 2) currentMode = PVE_EASY;
+        else if (opponent == 3) currentMode = PVE_MED;
+        else if (opponent == 4) currentMode = PVE_HARD;
         
         currentState = PLAYING;
+        Gamepaused = false;
         score1 = 0; score2 = 0; 
+        match_timer = 0;
+        dead_zone_timer = 3600;
+        special_charge_1 = 0;
+        special_charge_2 = 0;
+        p1_fireball_active = false;
+        p2_shield_frames = 0;
+        
         ball_x = WIDTH/2; ball_y = HEIGHT/2;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    void trigger_action(int action) {
+        if (action == 0) { // Resume
+            Gamepaused = false;
+        } else if (action == 1) { // Restart
+            start_game((int)currentRules, (int)currentMode);
+        } else if (action == 2) { // Quit to Menu
+            currentState = MENU;
+        }
     }
 }
 

@@ -53,6 +53,34 @@
             display: none;
         }
 
+        /* Special Bars */
+        .special-container {
+            width: 150px;
+            height: 10px;
+            border: 1px solid #fff;
+            margin-top: 5px;
+        }
+        .special-bar {
+            height: 100%;
+            background-color: #ff0055;
+            width: 0%;
+            transition: width 0.2s;
+            box-shadow: 0 0 10px #ff0055;
+        }
+        .special-bar.p2 {
+            background-color: #0055ff;
+            box-shadow: 0 0 10px #0055ff;
+            float: right;
+        }
+        
+        /* Glow animations */
+        @keyframes pulse {
+            0% { transform: scale(1); text-shadow: 0 0 5px #fff; }
+            50% { transform: scale(1.05); text-shadow: 0 0 20px #00ffcc, 0 0 30px #00ffcc; }
+            100% { transform: scale(1); text-shadow: 0 0 5px #fff; }
+        }
+        .pulse-text { animation: pulse 2s infinite; }
+
         /* Wrapper para o canvas e overlays */
         .canvas-wrapper {
             position: relative;
@@ -159,21 +187,47 @@
             <div class="score-box">
                 <h2>Player 1</h2>
                 <div class="score" id="score1">0</div>
+                <div class="special-container"><div class="special-bar" id="special1"></div></div>
             </div>
-            <div id="pause-indicator">PAUSADO</div>
-            <div class="score-box">
+            <div id="pause-indicator" style="opacity: 0;">PAUSADO</div>
+            <div class="score-box" style="text-align: right;">
                 <h2>Player 2</h2>
                 <div class="score" id="score2">0</div>
+                <div class="special-container"><div class="special-bar p2" id="special2"></div></div>
             </div>
         </div>
         
         <!-- Menu HTML -->
         <div id="menu-overlay" class="menu-overlay">
-            <h1>PONG</h1>
-            <button onclick="startGame(1)">1. Player vs Player</button>
-            <button onclick="startGame(2)">2. Player vs AI (Easy)</button>
-            <button onclick="startGame(3)">3. Player vs AI (Medium)</button>
-            <button onclick="startGame(4)">4. Player vs AI (Hard)</button>
+            <h1 class="pulse-text">PONG ARCADE</h1>
+            
+            <div id="main-menu-view" style="display:flex; flex-direction:column; align-items:center;">
+                <button onclick="showModeMenu()">PLAY</button>
+            </div>
+            
+            <div id="mode-menu-view" style="display:none; flex-direction:column; align-items:center;">
+                <h2 style="margin-bottom:20px;">Select Rules</h2>
+                <button onclick="selectMode(0)">Classic</button>
+                <button onclick="selectMode(1)">Dead Zone</button>
+                <button onclick="showMainMenu()">Back</button>
+            </div>
+            
+            <div id="opponent-menu-view" style="display:none; flex-direction:column; align-items:center;">
+                <h2 style="margin-bottom:20px;">Select Opponent</h2>
+                <button onclick="startGame(1)">Player vs Player</button>
+                <button onclick="startGame(2)">Player vs AI (Easy)</button>
+                <button onclick="startGame(3)">Player vs AI (Medium)</button>
+                <button onclick="startGame(4)">Player vs AI (Hard)</button>
+                <button onclick="showModeMenu()">Back</button>
+            </div>
+        </div>
+        
+        <!-- Pause Menu Overlay -->
+        <div id="pause-overlay" class="menu-overlay">
+            <h1 class="pulse-text">PAUSED</h1>
+            <button onclick="resumeGame()">Resume</button>
+            <button onclick="restartGame()">Restart Match</button>
+            <button onclick="quitToMenu()">Quit to Menu</button>
         </div>
         
         <!-- Canvas para o OpenGL via Emscripten -->
@@ -189,6 +243,7 @@
             <h3>Player 1</h3>
             <p>Subir: <span class="key">W</span></p>
             <p>Descer: <span class="key">S</span></p>
+            <p>Especial: <span class="key">Espaço</span></p>
         </div>
         <div class="player-controls" style="padding-left: 40px;">
             <h3>Geral</h3>
@@ -198,6 +253,7 @@
             <h3>Player 2</h3>
             <p>Subir: <span class="key">↑</span></p>
             <p>Descer: <span class="key">↓</span></p>
+            <p>Especial: <span class="key">Numpad 0</span></p>
         </div>
     </div>
 
@@ -209,7 +265,7 @@
         let currentDx = 0;
         let currentDy = 0;
         
-        window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall, dx, dy) {
+        window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall, dx, dy, spec1, spec2) {
             if (score1 !== lastScore1) {
                 document.getElementById('score1').innerText = score1;
                 lastScore1 = score1;
@@ -218,8 +274,12 @@
                 document.getElementById('score2').innerText = score2;
                 lastScore2 = score2;
             }
-            document.getElementById('pause-indicator').style.display = isPaused ? 'block' : 'none';
+            
             document.getElementById('menu-overlay').style.display = isMenu ? 'flex' : 'none';
+            document.getElementById('pause-overlay').style.display = (isPaused && !isMenu) ? 'flex' : 'none';
+            
+            document.getElementById('special1').style.width = spec1 + '%';
+            document.getElementById('special2').style.width = spec2 + '%';
             
             currentDx = dx;
             currentDy = dy;
@@ -236,11 +296,40 @@
             }
         };
 
-        function startGame(mode) {
-            // Chama a funçao C++ exportada para trocar o modo
-            if (Module && Module._select_menu) {
-                Module._select_menu(mode);
+        let selectedRules = 0; // 0=CLASSIC, 1=DEAD_ZONE
+
+        function showMainMenu() {
+            document.getElementById('main-menu-view').style.display = 'flex';
+            document.getElementById('mode-menu-view').style.display = 'none';
+            document.getElementById('opponent-menu-view').style.display = 'none';
+        }
+        function showModeMenu() {
+            document.getElementById('main-menu-view').style.display = 'none';
+            document.getElementById('mode-menu-view').style.display = 'flex';
+            document.getElementById('opponent-menu-view').style.display = 'none';
+        }
+        function selectMode(rules) {
+            selectedRules = rules;
+            document.getElementById('main-menu-view').style.display = 'none';
+            document.getElementById('mode-menu-view').style.display = 'none';
+            document.getElementById('opponent-menu-view').style.display = 'flex';
+        }
+
+        function startGame(opponent) {
+            if (Module && Module._start_game) {
+                Module._start_game(selectedRules, opponent);
             }
+        }
+        
+        function resumeGame() {
+            if (Module && Module._trigger_action) Module._trigger_action(0);
+        }
+        function restartGame() {
+            if (Module && Module._trigger_action) Module._trigger_action(1);
+        }
+        function quitToMenu() {
+            if (Module && Module._trigger_action) Module._trigger_action(2);
+            showMainMenu(); // Reset the UI state
         }
 
         // Funções de Audio via Web Audio API injetadas no emscripten
