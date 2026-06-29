@@ -56,10 +56,9 @@
         /* Wrapper para o canvas e overlays */
         .canvas-wrapper {
             position: relative;
+            display: inline-block; /* Ajusta perfeitamente ao conteudo sem esticar */
             max-width: 100vw;
             max-height: 80vh;
-            aspect-ratio: 640 / 500;
-            width: 100%;
         }
 
         /* O canvas gerado pelo emscripten */
@@ -68,8 +67,10 @@
             border: 2px solid #fff;
             outline: none;
             background-color: #000;
-            width: 100%;
-            height: 100%;
+            max-width: 100vw;
+            max-height: 80vh;
+            aspect-ratio: 640 / 500;
+            object-fit: contain;
         }
 
         #ascii-ball {
@@ -288,38 +289,48 @@
         };
 
         // ASCII 3D Sphere Generator
-        let A = 0, B = 0;
-        const asciiChars = ".,-~:;=!*#$@";
+        let sphereAngle = 0;
+        const asciiChars = " .,-~:;=!*#$@";
         function renderAsciiSphere() {
-            let b = [];
-            let z = [];
-            const width = 12, height = 12; // Small grid for the ball
-            A += 0.1; B += 0.05;
-            let cA = Math.cos(A), sA = Math.sin(A), cB = Math.cos(B), sB = Math.sin(B);
+            const r = 8; // Raio em caracteres
+            const width = 32; // Ajuste para o aspect-ratio da fonte monoespacada
+            const height = 16;
             
-            for(let i=0; i<width*height; i++) { b[i] = ' '; z[i] = 0; }
+            sphereAngle += 0.05; // Velocidade de rotacao da luz
             
-            for(let j=0; j<6.28; j+=0.3) {
-                for(let i=0; i<6.28; i+=0.1) {
-                    let c = Math.sin(i), d = Math.cos(j), e = Math.sin(A), f = Math.sin(j), g = Math.cos(A);
-                    let h = d + 2, D = 1 / (c * h * e + f * g + 5);
-                    let l = Math.cos(i), m = Math.cos(B), n = Math.sin(B);
-                    let t = c * h * g - f * e;
-                    let x = Math.floor(width/2 + (width/2) * D * (l * h * m - t * n));
-                    let y = Math.floor(height/2 + (height/2) * D * (l * h * n + t * m));
-                    let o = x + width * y;
-                    let N = Math.floor(8 * ((f * e - c * d * g) * m - c * d * e - f * g - l * d * n));
-                    if(y >= 0 && y < height && x >= 0 && x < width && D > z[o]) {
-                        z[o] = D;
-                        b[o] = asciiChars[N > 0 ? N : 0];
-                    }
-                }
-            }
+            // Fonte de luz girando ao redor da esfera
+            let Lx = Math.cos(sphereAngle);
+            let Ly = -0.5; // Luz levemente de cima
+            let Lz = Math.sin(sphereAngle) - 1.5; // Luz na frente da esfera
+            
+            // Normalizar vetor da luz
+            let L_len = Math.sqrt(Lx*Lx + Ly*Ly + Lz*Lz);
+            Lx /= L_len; Ly /= L_len; Lz /= L_len;
             
             let html = "";
-            for(let i=0; i<width*height; i++) {
-                if(i % width === 0 && i !== 0) html += "\n";
-                html += b[i];
+            for (let y = -height/2; y < height/2; y++) {
+                for (let x = -width/2; x < width/2; x++) {
+                    let adj_x = x * 0.5; // Corrige o fato da fonte ser mais alta que larga
+                    let sq = adj_x*adj_x + y*y;
+                    if (sq <= r*r) {
+                        let z = Math.sqrt(r*r - sq);
+                        // Vetor Normal da superficie da esfera
+                        let Nx = adj_x / r;
+                        let Ny = y / r;
+                        let Nz = z / r;
+                        
+                        // Calculo de Iluminacao (Dot product N . L)
+                        let lum = -(Nx*Lx + Ny*Ly + Nz*Lz); 
+                        if (lum < 0) lum = 0;
+                        
+                        let charIdx = Math.floor(lum * (asciiChars.length - 1));
+                        if(charIdx >= asciiChars.length) charIdx = asciiChars.length - 1;
+                        html += asciiChars[charIdx];
+                    } else {
+                        html += " ";
+                    }
+                }
+                html += "\n";
             }
             document.getElementById('ascii-ball').innerText = html;
             requestAnimationFrame(renderAsciiSphere);
