@@ -46,6 +46,31 @@ GameMode currentMode = PVP;
 bool keys[256] = {false};
 bool specialKeys[256] = {false};
 
+// Efeitos Arcade
+int shake_frames = 0;
+struct Particle {
+    float x, y, dx, dy;
+    int life;
+    float r, g, b;
+};
+#define NUM_PARTICLES 60
+Particle particles[NUM_PARTICLES];
+
+void initExplosion(float x, float y) {
+    for (int i = 0; i < NUM_PARTICLES; i++) {
+        particles[i].x = x;
+        particles[i].y = y;
+        float angle = (rand() % 360) * 3.14159f / 180.0f;
+        float speed = (rand() % 100) / 10.0f + 2.0f;
+        particles[i].dx = cos(angle) * speed;
+        particles[i].dy = sin(angle) * speed;
+        particles[i].life = 20 + rand() % 20; // 20 to 40 frames
+        particles[i].r = (rand() % 100) / 100.0f + 0.5f;
+        particles[i].g = (rand() % 100) / 100.0f;
+        particles[i].b = (rand() % 100) / 100.0f + 0.5f; // Purple/Pink neon bias
+    }
+}
+
 // Cria a janela:
 void init()
 {
@@ -146,12 +171,18 @@ void display()
     // Atualizar UI no Javascript independentemente do estado do jogo
 #ifdef __EMSCRIPTEN__
     EM_ASM({
-        if(window.updateUI) window.updateUI($0, $1, $2, $3);
-    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused);
+        if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6);
+    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1);
 #endif
 
 	// Desenhando a mesa
     glClear(GL_COLOR_BUFFER_BIT);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    if (shake_frames > 0) {
+        glTranslatef((rand() % 10) - 5, (rand() % 10) - 5, 0.0f);
+    }
 	
 	if (currentState == MENU) {
 #ifndef __EMSCRIPTEN__
@@ -213,16 +244,32 @@ void display()
  	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x + PADDLE_HEIGHT);
  	glEnd();
 
- 	// Desenha a bola usando GL_TRIANGLES
- 	glBegin(GL_TRIANGLES);
- 	glVertex2f(ball_x - BALL_RADIUS, ball_y - BALL_RADIUS);
- 	glVertex2f(ball_x + BALL_RADIUS, ball_y - BALL_RADIUS);
- 	glVertex2f(ball_x + BALL_RADIUS, ball_y + BALL_RADIUS);
- 	
- 	glVertex2f(ball_x - BALL_RADIUS, ball_y - BALL_RADIUS);
- 	glVertex2f(ball_x + BALL_RADIUS, ball_y + BALL_RADIUS);
- 	glVertex2f(ball_x - BALL_RADIUS, ball_y + BALL_RADIUS);
- 	glEnd();
+    // Particulas
+    glPointSize(3.0f);
+    glBegin(GL_POINTS);
+    for (int i = 0; i < NUM_PARTICLES; i++) {
+        if (particles[i].life > 0) {
+            glColor3f(particles[i].r, particles[i].g, particles[i].b);
+            glVertex2f(particles[i].x, particles[i].y);
+        }
+    }
+    glEnd();
+
+#ifndef __EMSCRIPTEN__
+    if (shake_frames == 0) {
+     	// Desenha a bola usando GL_TRIANGLES
+     	glColor3f(1.0, 1.0, 1.0);
+     	glBegin(GL_TRIANGLES);
+     	glVertex2f(ball_x - BALL_RADIUS, ball_y - BALL_RADIUS);
+     	glVertex2f(ball_x + BALL_RADIUS, ball_y - BALL_RADIUS);
+     	glVertex2f(ball_x + BALL_RADIUS, ball_y + BALL_RADIUS);
+     	
+     	glVertex2f(ball_x - BALL_RADIUS, ball_y - BALL_RADIUS);
+     	glVertex2f(ball_x + BALL_RADIUS, ball_y + BALL_RADIUS);
+     	glVertex2f(ball_x - BALL_RADIUS, ball_y + BALL_RADIUS);
+     	glEnd();
+ 	}
+#endif
 
     glutSwapBuffers();
 }
@@ -238,6 +285,18 @@ void update_physics()
 {
 	if (Gamepaused == false)
 	{	
+	    if (shake_frames > 0) {
+	        shake_frames--;
+            for (int i = 0; i < NUM_PARTICLES; i++) {
+                if (particles[i].life > 0) {
+                    particles[i].x += particles[i].dx;
+                    particles[i].y += particles[i].dy;
+                    particles[i].life--;
+                }
+            }
+            return; // Pause physical simulation while exploding
+	    }
+	
     	// Mover a bola
     	ball_x += ball_dx;
     	ball_y += ball_dy;
@@ -262,12 +321,14 @@ void update_physics()
 		if (ball_x + BALL_RADIUS >= left_boundary || ball_x - BALL_RADIUS == 0) // Original logic was 'left' and 'right' but they were initialized differently
 		{
     		score1++;
+            initExplosion(ball_x, ball_y);
+            shake_frames = 30;
 #ifdef __EMSCRIPTEN__
-            EM_ASM({ if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); });
+            EM_ASM({ if(window.playExplosion) window.playExplosion(); });
 #endif
     		// reset para a bola voltar ao centro
-    		ball_x = 320.0;
-    		ball_y = 200.0;
+    		ball_x = WIDTH/2;
+    		ball_y = HEIGHT/2;
     		ball_dx = BALL_SPEED;
 			ball_dy = BALL_SPEED;
 		}	
@@ -275,12 +336,14 @@ void update_physics()
 		if (ball_x + BALL_RADIUS >= right_boundary || ball_x - BALL_RADIUS <= 0)
 		{
     	   	score2++;
+            initExplosion(ball_x, ball_y);
+            shake_frames = 30;
 #ifdef __EMSCRIPTEN__
-            EM_ASM({ if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); });
+            EM_ASM({ if(window.playExplosion) window.playExplosion(); });
 #endif
     	   	// reset para a bola voltar ao centro
-    	   	ball_x = 320.0;
-    	   	ball_y = 200.0;
+    	   	ball_x = WIDTH/2;
+    	   	ball_y = HEIGHT/2;
     		ball_dx = BALL_SPEED;
 			ball_dy = BALL_SPEED;
 		}
