@@ -44,9 +44,12 @@ bool specialKeys[256] = {false};
 void init()
 {
     glClearColor(0.0, 0.0, 0.0, 0.0);
+    glDisable(GL_DEPTH_TEST); // Ensure depth test doesn't hide 2D objects
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluOrtho2D(0, WIDTH, 0, HEIGHT);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
 }   
 
 // Funcao de Pause 
@@ -135,32 +138,44 @@ void display()
     glVertex2f(WIDTH, 2.0);
     glEnd();
 		
- 	// Desenha as paletas
+ 	// Desenha as paletas usando GL_TRIANGLES para garantir compatibilidade com WebGL
  	//Player 01:
- 	glBegin(GL_QUADS);
+ 	glBegin(GL_TRIANGLES);
  	glColor3f(1.0, 1.0, 1.0);
  	glVertex2f(20.0, paddle1_x);
  	glVertex2f(PADDLE_WIDTH, paddle1_x);
  	glVertex2f(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
+ 	
+ 	glVertex2f(20.0, paddle1_x);
+ 	glVertex2f(PADDLE_WIDTH, paddle1_x + PADDLE_HEIGHT);
  	glVertex2f(20.0, paddle1_x + PADDLE_HEIGHT);
     
  	// Player 02:
- 	glColor3f(1.0, 1.0, 1.0);
  	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
  	glVertex2f(WIDTH - 20.0, paddle2_x);
+ 	glVertex2f(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
+ 	
+ 	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x);
  	glVertex2f(WIDTH - 20.0, paddle2_x + PADDLE_HEIGHT);
  	glVertex2f(WIDTH - PADDLE_WIDTH, paddle2_x + PADDLE_HEIGHT);
  	glEnd();
 
- 	// Desenha a bola:
- 	glBegin(GL_TRIANGLE_FAN);
+ 	// Desenha a bola usando GL_TRIANGLES (aproximando um circulo)
+ 	glBegin(GL_TRIANGLES);
  	glColor3f(1.0, 1.0, 1.0);
-  	for (float angle = 0.0; angle <= 360.0; angle += 5.0)
+  	for (float angle = 0.0; angle <= 360.0; angle += 10.0)
   	{
 		float radian = angle * 3.1416 / 180.0;
-		float x = ball_x + BALL_RADIUS * cos(radian);
-		float y = ball_y + BALL_RADIUS * sin(radian);
-		glVertex2f(x, y);
+		float next_radian = (angle + 10.0) * 3.1416 / 180.0;
+		
+		float x1 = ball_x + BALL_RADIUS * cos(radian);
+		float y1 = ball_y + BALL_RADIUS * sin(radian);
+		float x2 = ball_x + BALL_RADIUS * cos(next_radian);
+		float y2 = ball_y + BALL_RADIUS * sin(next_radian);
+		
+		glVertex2f(ball_x, ball_y); // Centro
+		glVertex2f(x1, y1);
+		glVertex2f(x2, y2);
  	}
  	glEnd();
 

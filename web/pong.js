@@ -7403,6 +7403,7 @@ async function createWasm() {
   var _emscripten_glColor3f = (r, g, b) => _glColor4f(r, g, b, 1);
   var _glColor3f = _emscripten_glColor3f;
 
+
   var _emscripten_glEnd = () => {
       GLImmediate.prepareClientAttributes(GLImmediate.rendererComponents[GLImmediate.VERTEX], true);
       GLImmediate.firstVertex = 0;
@@ -8502,6 +8503,8 @@ var wasmImports = {
   glClearColor: _glClearColor,
   /** @export */
   glColor3f: _glColor3f,
+  /** @export */
+  glDisable: _glDisable,
   /** @export */
   glEnd: _glEnd,
   /** @export */
