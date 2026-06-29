@@ -35,7 +35,8 @@ float ball_y = HEIGHT / 2;
 float ball_dx = BALL_SPEED;
 float ball_dy = BALL_SPEED;
 bool Gamepaused = false;
-float Ball_speed_pause = BALL_SPEED;
+float Ball_speed_x_pause = BALL_SPEED;
+float Ball_speed_y_pause = BALL_SPEED;
 float Ball_speed_increment = 20;
 
 enum GameState { MENU, PLAYING };
@@ -137,7 +138,8 @@ void pauseGame()
 	if (Gamepaused == false)
 	{
 		Gamepaused = true;
-		Ball_speed_pause = ball_dx;
+		Ball_speed_x_pause = ball_dx;
+		Ball_speed_y_pause = ball_dy;
 		ball_dx = 0;
 		ball_dy = 0;	 	
 	}
@@ -148,8 +150,10 @@ void resumeGame()
 	if (Gamepaused == true)
 	{
 		Gamepaused = false;
-		ball_dx = Ball_speed_pause;
-		ball_dy = Ball_speed_pause;
+		if (Ball_speed_x_pause != 0) {
+		    ball_dx = Ball_speed_x_pause;
+		    ball_dy = Ball_speed_y_pause;
+		}
 	}
 }
 
@@ -546,7 +550,7 @@ extern "C" {
     EMSCRIPTEN_KEEPALIVE
     void trigger_action(int action) {
         if (action == 0) { // Resume
-            Gamepaused = false;
+            resumeGame();
         } else if (action == 1) { // Restart
             start_game((int)currentRules, (int)currentMode);
         } else if (action == 2) { // Quit to Menu
