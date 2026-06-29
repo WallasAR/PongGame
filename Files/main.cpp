@@ -69,7 +69,7 @@ struct Particle {
     int life;
     float r, g, b;
 };
-#define NUM_PARTICLES 60
+#define NUM_PARTICLES 200
 Particle particles[NUM_PARTICLES];
 
 void initExplosion(float x, float y) {
@@ -84,6 +84,27 @@ void initExplosion(float x, float y) {
         particles[i].r = (rand() % 100) / 100.0f + 0.5f;
         particles[i].g = (rand() % 100) / 100.0f;
         particles[i].b = (rand() % 100) / 100.0f + 0.5f; // Purple/Pink neon bias
+    }
+}
+
+void initDoubleWallExplosion(float left_x, float right_x, float width) {
+    for (int i = 0; i < NUM_PARTICLES; i++) {
+        if (i % 2 == 0) {
+            particles[i].x = left_x + (rand() % (int)width);
+        } else {
+            particles[i].x = right_x + (rand() % (int)width);
+        }
+        particles[i].y = (rand() % HEIGHT);
+        
+        float angle = (rand() % 360) * 3.14159f / 180.0f;
+        float speed = (rand() % 100) / 10.0f + 3.0f;
+        
+        particles[i].dx = cos(angle) * speed;
+        particles[i].dy = sin(angle) * speed;
+        particles[i].life = 30 + rand() % 30; // longer life
+        particles[i].r = (rand() % 100) / 100.0f + 0.5f;
+        particles[i].g = (rand() % 100) / 100.0f;
+        particles[i].b = (rand() % 100) / 100.0f + 0.5f;
     }
 }
 
@@ -213,17 +234,20 @@ void display()
         return;
     }
 	
-    // Draw Dead Zones if active
-    if (currentRules == DEAD_ZONE && dead_zone_width > 0) {
-        glColor3f(0.5, 0.0, 0.0);
-        glBegin(GL_TRIANGLES);
-        // Left dead zone
-        glVertex2f(0, 0); glVertex2f(dead_zone_width, 0); glVertex2f(dead_zone_width, HEIGHT);
-        glVertex2f(0, 0); glVertex2f(dead_zone_width, HEIGHT); glVertex2f(0, HEIGHT);
-        // Right dead zone
-        glVertex2f(WIDTH - dead_zone_width, 0); glVertex2f(WIDTH, 0); glVertex2f(WIDTH, HEIGHT);
-        glVertex2f(WIDTH - dead_zone_width, 0); glVertex2f(WIDTH, HEIGHT); glVertex2f(WIDTH - dead_zone_width, HEIGHT);
-        glEnd();
+    // Draw Warning Zones if about to shrink
+    if (currentRules == DEAD_ZONE && dead_zone_timer > 0) {
+        int time_to_shrink = dead_zone_timer % 1200;
+        if (time_to_shrink <= 180 && (dead_zone_timer % 30) > 15) { // Last 3 seconds, blink
+            glColor3f(0.8f, 0.0f, 0.0f); // Bright red warning
+            glBegin(GL_TRIANGLES);
+            // Left warning zone
+            glVertex2f(dead_zone_width, 0); glVertex2f(dead_zone_width + 60, 0); glVertex2f(dead_zone_width + 60, HEIGHT);
+            glVertex2f(dead_zone_width, 0); glVertex2f(dead_zone_width + 60, HEIGHT); glVertex2f(dead_zone_width, HEIGHT);
+            // Right warning zone
+            glVertex2f(WIDTH - dead_zone_width - 60, 0); glVertex2f(WIDTH - dead_zone_width, 0); glVertex2f(WIDTH - dead_zone_width, HEIGHT);
+            glVertex2f(WIDTH - dead_zone_width - 60, 0); glVertex2f(WIDTH - dead_zone_width, HEIGHT); glVertex2f(WIDTH - dead_zone_width - 60, HEIGHT);
+            glEnd();
+        }
     }
 
 	// Linha central vertical tracejada (estilo Pong clássico)
@@ -328,7 +352,18 @@ void update_physics()
 	        if (currentRules == DEAD_ZONE) {
 	            if (dead_zone_timer > 0) {
 	                dead_zone_timer--;
+	                if (dead_zone_timer > 0 && dead_zone_timer % 1200 == 0) {
+	                    // Just shrunk! Trigger explosion in both zones
+	                    if (dead_zone_width < 240) {
+	                        initDoubleWallExplosion(dead_zone_width, WIDTH - dead_zone_width - 60, 60);
+	                        shake_frames = 15;
+#ifdef __EMSCRIPTEN__
+                            EM_ASM({ if(window.playExplosion) window.playExplosion(); });
+#endif
+	                    }
+	                }
 	                dead_zone_width = ((7200 - dead_zone_timer) / 1200) * 60; // Every 1200 frames (20s) grows 60px
+	                if (dead_zone_width > 240) dead_zone_width = 240; // Max 4 shrinks
 	            }
 	            left_boundary = dead_zone_width;
 	            right_boundary = WIDTH - dead_zone_width;
@@ -399,7 +434,7 @@ void update_physics()
                 }
             }
             if (shake_frames == 0) {
-                respawn_delay_frames = 60; // 1 second delay at 60fps
+                respawn_delay_frames = 60 - (dead_zone_width / 6); // Max 60, Min 20
             }
             return; // Pause ball physics while exploding
 	    }
