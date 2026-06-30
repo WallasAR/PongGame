@@ -197,17 +197,17 @@
             z-index: 11;
         }
         @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
+            0% { transform: translate(2px, 2px) rotate(0deg); }
+            10% { transform: translate(-2px, -4px) rotate(-2deg); }
+            20% { transform: translate(-6px, 0px) rotate(2deg); }
+            30% { transform: translate(6px, 4px) rotate(0deg); }
+            40% { transform: translate(2px, -2px) rotate(2deg); }
+            50% { transform: translate(-2px, 4px) rotate(-2deg); }
+            60% { transform: translate(-6px, 2px) rotate(0deg); }
+            70% { transform: translate(6px, 2px) rotate(-2deg); }
+            80% { transform: translate(-2px, -2px) rotate(2deg); }
+            90% { transform: translate(2px, 4px) rotate(0deg); }
+            100% { transform: translate(2px, -4px) rotate(-2deg); }
         }
 
         .menu-overlay h1 {
@@ -236,8 +236,10 @@
             text-transform: uppercase;
         }
         .menu-overlay button:hover {
-            animation: shake 0.4s;
+            animation: shake 0.2s;
             animation-iteration-count: infinite;
+            background: white;
+            color: black;
         }
         
         .retro-select {
@@ -343,10 +345,16 @@
             <div id="opponent-menu-view" style="display:none; flex-direction:column; align-items:center;">
                 <h2 style="margin-bottom:20px;">Select Opponent</h2>
                 <button onclick="showLoadoutMenu(1)">Player vs Player</button>
-                <button onclick="showLoadoutMenu(2)">Player vs AI (Easy)</button>
-                <button onclick="showLoadoutMenu(3)">Player vs AI (Medium)</button>
-                <button onclick="showLoadoutMenu(4)">Player vs AI (Hard)</button>
+                <button onclick="showDifficultyMenu()">Player vs AI</button>
                 <button onclick="showModeMenu()">Back</button>
+            </div>
+            
+            <div id="difficulty-menu-view" style="display:none; flex-direction:column; align-items:center;">
+                <h2 style="margin-bottom:20px;">Select Difficulty</h2>
+                <button onclick="showLoadoutMenu(2)">Easy</button>
+                <button onclick="showLoadoutMenu(3)">Medium</button>
+                <button onclick="showLoadoutMenu(4)">Hard</button>
+                <button onclick="showOpponentMenu()">Back</button>
             </div>
             
             <div id="loadout-menu-view" style="display:none; flex-direction:column; align-items:center; z-index: 20; width: 800px; max-width: 100%;">
@@ -529,6 +537,7 @@
             document.getElementById('main-menu-view').style.display = 'none';
             document.getElementById('mode-menu-view').style.display = 'flex';
             document.getElementById('opponent-menu-view').style.display = 'none';
+            document.getElementById('difficulty-menu-view').style.display = 'none';
             document.getElementById('loadout-menu-view').style.display = 'none';
         }
         function selectMode(rules) {
@@ -538,10 +547,22 @@
             document.getElementById('opponent-menu-view').style.display = 'flex';
         }
 
+        function showDifficultyMenu() {
+            document.getElementById('opponent-menu-view').style.display = 'none';
+            document.getElementById('difficulty-menu-view').style.display = 'flex';
+        }
+        function showOpponentMenu() {
+            document.getElementById('difficulty-menu-view').style.display = 'none';
+            document.getElementById('opponent-menu-view').style.display = 'flex';
+        }
+
         let selectedOpponent = 1;
+        let isFromDifficulty = false;
         function showLoadoutMenu(opponent) {
             selectedOpponent = opponent;
+            isFromDifficulty = opponent > 1;
             document.getElementById('opponent-menu-view').style.display = 'none';
+            document.getElementById('difficulty-menu-view').style.display = 'none';
             document.getElementById('loadout-menu-view').style.display = 'flex';
             
             if (opponent === 1) {
@@ -552,7 +573,11 @@
         }
         function goBackToOpponentMenu() {
             document.getElementById('loadout-menu-view').style.display = 'none';
-            document.getElementById('opponent-menu-view').style.display = 'flex';
+            if (isFromDifficulty) {
+                document.getElementById('difficulty-menu-view').style.display = 'flex';
+            } else {
+                document.getElementById('opponent-menu-view').style.display = 'flex';
+            }
         }
         function startGameActual() {
             if (Module && Module._set_loadout) {
