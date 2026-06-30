@@ -52,8 +52,24 @@ int dead_zone_timer = 7200; // 120 seconds
 int dead_zone_width = 0;
 float special_charge_1 = 0;
 float special_charge_2 = 0;
+// Skill System
+enum SkillType {
+    SKILL_NONE = 0, SKILL_SMASH = 1, SKILL_SHIELD = 2, SKILL_GHOST = 3,
+    SKILL_BLINK = 4, SKILL_FREEZE = 5, SKILL_EMP = 6
+};
+int p1_loadout[3] = {SKILL_SMASH, SKILL_SHIELD, SKILL_GHOST}; // Forward, Backward, Neutral
+int p2_loadout[3] = {SKILL_SMASH, SKILL_SHIELD, SKILL_GHOST};
+
+// Skill States
 bool p1_fireball_active = false;
+bool p2_fireball_active = false;
+int p1_shield_frames = 0;
 int p2_shield_frames = 0;
+int ghost_frames = 0;
+int p1_freeze_frames = 0;
+int p2_freeze_frames = 0;
+int p1_emp_frames = 0;
+int p2_emp_frames = 0;
 
 float paddle1_height = PADDLE_HEIGHT;
 float paddle2_height = PADDLE_HEIGHT;
@@ -65,10 +81,14 @@ bool specialKeys[256] = {false};
 // Configurable Keys
 int key_p1_up = 'w'; bool p1_up_spec = false;
 int key_p1_down = 's'; bool p1_down_spec = false;
+int key_p1_forward = 'd'; bool p1_forward_spec = false;
+int key_p1_backward = 'a'; bool p1_backward_spec = false;
 int key_p1_spec = ' '; bool p1_spec_spec = false;
 
 int key_p2_up = GLUT_KEY_UP; bool p2_up_spec = true;
 int key_p2_down = GLUT_KEY_DOWN; bool p2_down_spec = true;
+int key_p2_forward = GLUT_KEY_LEFT; bool p2_forward_spec = true;
+int key_p2_backward = GLUT_KEY_RIGHT; bool p2_backward_spec = true;
 int key_p2_spec = '0'; bool p2_spec_spec = false;
 
 int key_pause = 13; bool pause_spec = false;
@@ -82,6 +102,18 @@ extern "C" {
         else if (action_id == 4) { key_p2_down = new_key; p2_down_spec = is_special; }
         else if (action_id == 5) { key_p2_spec = new_key; p2_spec_spec = is_special; }
         else if (action_id == 6) { key_pause = new_key; pause_spec = is_special; }
+        else if (action_id == 7) { key_p1_forward = new_key; p1_forward_spec = is_special; }
+        else if (action_id == 8) { key_p1_backward = new_key; p1_backward_spec = is_special; }
+        else if (action_id == 9) { key_p2_forward = new_key; p2_forward_spec = is_special; }
+        else if (action_id == 10) { key_p2_backward = new_key; p2_backward_spec = is_special; }
+    }
+    
+    EMSCRIPTEN_KEEPALIVE void set_loadout(int player, int forward, int backward, int neutral) {
+        if (player == 1) {
+            p1_loadout[0] = forward; p1_loadout[1] = backward; p1_loadout[2] = neutral;
+        } else if (player == 2) {
+            p2_loadout[0] = forward; p2_loadout[1] = backward; p2_loadout[2] = neutral;
+        }
     }
 }
 
@@ -236,7 +268,7 @@ void display()
 #ifdef __EMSCRIPTEN__
     EM_ASM({
         if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
-    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, shake_frames > 0 ? 0 : 1, ball_dx, ball_dy, (int)special_charge_1, (int)special_charge_2, (currentRules == DEAD_ZONE) ? dead_zone_timer : -1, dead_zone_width);
+    }, score1, score2, (currentState == MENU) ? 1 : 0, Gamepaused, ball_x, ball_y, (shake_frames > 0 || ghost_frames > 0) ? 0 : 1, ball_dx, ball_dy, (int)special_charge_1, (int)special_charge_2, (currentRules == DEAD_ZONE) ? dead_zone_timer : -1, dead_zone_width);
 #endif
 
 	// Desenhando a mesa
@@ -246,6 +278,20 @@ void display()
     glLoadIdentity();
     if (shake_frames > 0) {
         glTranslatef((rand() % 10) - 5, (rand() % 10) - 5, 0.0f);
+    }
+    
+    // Draw ball if not ghosted
+    if (ghost_frames == 0) {
+        glPushMatrix();
+        glTranslatef(ball_x, ball_y, 0);
+        glBegin(GL_QUADS);
+        glColor3f(1.0, 1.0, 1.0);
+        glVertex2f(-BALL_SIZE, -BALL_SIZE);
+        glVertex2f(BALL_SIZE, -BALL_SIZE);
+        glVertex2f(BALL_SIZE, BALL_SIZE);
+        glVertex2f(-BALL_SIZE, BALL_SIZE);
+        glEnd();
+        glPopMatrix();
     }
 	
 	if (currentState == MENU) {
@@ -347,6 +393,24 @@ void reshape(int w, int h)
     glViewport(0, 0, WIDTH, HEIGHT);
 }
 
+void trigger_skill(int player, int skill_type) {
+    if (player == 1) {
+        if (skill_type == SKILL_SMASH) p1_fireball_active = true;
+        else if (skill_type == SKILL_SHIELD) p1_shield_frames = 300;
+        else if (skill_type == SKILL_GHOST) ghost_frames = 72; // 1.2s
+        else if (skill_type == SKILL_BLINK) { ball_x += 200; if (ball_x > WIDTH) ball_x = WIDTH; }
+        else if (skill_type == SKILL_FREEZE) p2_freeze_frames = 240; // 4s
+        else if (skill_type == SKILL_EMP) p2_emp_frames = 240; // 4s
+    } else {
+        if (skill_type == SKILL_SMASH) p2_fireball_active = true;
+        else if (skill_type == SKILL_SHIELD) p2_shield_frames = 300;
+        else if (skill_type == SKILL_GHOST) ghost_frames = 72;
+        else if (skill_type == SKILL_BLINK) { ball_x -= 200; if (ball_x < 0) ball_x = 0; }
+        else if (skill_type == SKILL_FREEZE) p1_freeze_frames = 240;
+        else if (skill_type == SKILL_EMP) p1_emp_frames = 240;
+    }
+}
+
 void update_physics()
 {
 	if (Gamepaused == false)
@@ -388,58 +452,84 @@ void update_physics()
 	        }
 	        
 	        // Process Abilities
+            bool p1_forward_pressed = p1_forward_spec ? specialKeys[key_p1_forward] : (keys[key_p1_forward] || (key_p1_forward >= 'a' && key_p1_forward <= 'z' && keys[key_p1_forward - 32]));
+            bool p1_backward_pressed = p1_backward_spec ? specialKeys[key_p1_backward] : (keys[key_p1_backward] || (key_p1_backward >= 'a' && key_p1_backward <= 'z' && keys[key_p1_backward - 32]));
             bool p1_spec_pressed = p1_spec_spec ? specialKeys[key_p1_spec] : (keys[key_p1_spec] || (key_p1_spec >= 'a' && key_p1_spec <= 'z' && keys[key_p1_spec - 32]));
-	        if (p1_spec_pressed && special_charge_1 >= 100) {
-	            special_charge_1 = 0;
-	            p1_fireball_active = true;
-	        }
             
+            if (special_charge_1 >= 100) {
+                if (p1_forward_pressed && p1_loadout[0] != SKILL_NONE) { trigger_skill(1, p1_loadout[0]); special_charge_1 = 0; }
+                else if (p1_backward_pressed && p1_loadout[1] != SKILL_NONE) { trigger_skill(1, p1_loadout[1]); special_charge_1 = 0; }
+                else if (p1_spec_pressed && p1_loadout[2] != SKILL_NONE) { trigger_skill(1, p1_loadout[2]); special_charge_1 = 0; }
+            }
+            
+            bool p2_forward_pressed = p2_forward_spec ? specialKeys[key_p2_forward] : (keys[key_p2_forward] || (key_p2_forward >= 'a' && key_p2_forward <= 'z' && keys[key_p2_forward - 32]));
+            bool p2_backward_pressed = p2_backward_spec ? specialKeys[key_p2_backward] : (keys[key_p2_backward] || (key_p2_backward >= 'a' && key_p2_backward <= 'z' && keys[key_p2_backward - 32]));
             bool p2_spec_pressed = p2_spec_spec ? specialKeys[key_p2_spec] : (keys[key_p2_spec] || (key_p2_spec >= 'a' && key_p2_spec <= 'z' && keys[key_p2_spec - 32]));
-	        if (p2_spec_pressed && special_charge_2 >= 100) {
-	            special_charge_2 = 0;
-	            p2_shield_frames = 300; // 5 seconds
-	        }
+            
+            if (special_charge_2 >= 100 && currentMode == PVP) {
+                if (p2_forward_pressed && p2_loadout[0] != SKILL_NONE) { trigger_skill(2, p2_loadout[0]); special_charge_2 = 0; }
+                else if (p2_backward_pressed && p2_loadout[1] != SKILL_NONE) { trigger_skill(2, p2_loadout[1]); special_charge_2 = 0; }
+                else if (p2_spec_pressed && p2_loadout[2] != SKILL_NONE) { trigger_skill(2, p2_loadout[2]); special_charge_2 = 0; }
+            }
 	        
+	        paddle1_height = (p1_shield_frames > 0) ? PADDLE_HEIGHT * 2 : PADDLE_HEIGHT;
+	        if (p1_shield_frames > 0) p1_shield_frames--;
 	        paddle2_height = (p2_shield_frames > 0) ? PADDLE_HEIGHT * 2 : PADDLE_HEIGHT;
 	        if (p2_shield_frames > 0) p2_shield_frames--;
+	        if (ghost_frames > 0) ghost_frames--;
+	        if (p1_freeze_frames > 0) p1_freeze_frames--;
+	        if (p2_freeze_frames > 0) p2_freeze_frames--;
+	        if (p1_emp_frames > 0) p1_emp_frames--;
+	        if (p2_emp_frames > 0) p2_emp_frames--;
 	    }
 	    
     	// Mover as paletas (sempre ativas, mesmo durante delays)
     	// Player 01
         bool p1_down_pressed = p1_down_spec ? specialKeys[key_p1_down] : (keys[key_p1_down] || (key_p1_down >= 'a' && key_p1_down <= 'z' && keys[key_p1_down - 32]));
         bool p1_up_pressed = p1_up_spec ? specialKeys[key_p1_up] : (keys[key_p1_up] || (key_p1_up >= 'a' && key_p1_up <= 'z' && keys[key_p1_up - 32]));
+        
+        if (p1_emp_frames > 0) { bool temp = p1_down_pressed; p1_down_pressed = p1_up_pressed; p1_up_pressed = temp; }
+        float p1_speed = (p1_freeze_frames > 0) ? PADDLE_SPEED * 0.5f : PADDLE_SPEED;
 
     	if (p1_down_pressed && paddle1_y > 0) {
-    	    paddle1_y -= PADDLE_SPEED;
+    	    paddle1_y -= p1_speed;
     	}
     	if (p1_up_pressed && paddle1_y < HEIGHT - paddle1_height) {
-    	    paddle1_y += PADDLE_SPEED;
+    	    paddle1_y += p1_speed;
     	}
     
     	// Player 02
     	if (currentMode == PVP) {
             bool p2_down_pressed = p2_down_spec ? specialKeys[key_p2_down] : (keys[key_p2_down] || (key_p2_down >= 'a' && key_p2_down <= 'z' && keys[key_p2_down - 32]));
             bool p2_up_pressed = p2_up_spec ? specialKeys[key_p2_up] : (keys[key_p2_up] || (key_p2_up >= 'a' && key_p2_up <= 'z' && keys[key_p2_up - 32]));
+            
+            if (p2_emp_frames > 0) { bool temp = p2_down_pressed; p2_down_pressed = p2_up_pressed; p2_up_pressed = temp; }
+            float p2_speed = (p2_freeze_frames > 0) ? PADDLE_SPEED * 0.5f : PADDLE_SPEED;
 
         	if (p2_down_pressed && paddle2_y > 0) {
-        	    paddle2_y -= PADDLE_SPEED;
+        	    paddle2_y -= p2_speed;
         	}
         	if (p2_up_pressed && paddle2_y < HEIGHT - paddle2_height) {
-        	    paddle2_y += PADDLE_SPEED;
+        	    paddle2_y += p2_speed;
         	}
     	} else {
     	    // AI Logic
-    	    float ai_speed = PADDLE_SPEED;
+    	    float ai_speed = (p2_freeze_frames > 0) ? PADDLE_SPEED * 0.5f : PADDLE_SPEED;
     	    float react_x = 0;
-    	    if (currentMode == PVE_EASY) { ai_speed = PADDLE_SPEED * 0.4f; react_x = WIDTH / 2.0f; }
-    	    else if (currentMode == PVE_MED) { ai_speed = PADDLE_SPEED * 0.7f; react_x = WIDTH / 4.0f; }
-    	    else if (currentMode == PVE_HARD) { ai_speed = PADDLE_SPEED * 1.1f; react_x = 0.0f; }
+    	    if (currentMode == PVE_EASY) { ai_speed = ai_speed * 0.4f; react_x = WIDTH / 2.0f; }
+    	    else if (currentMode == PVE_MED) { ai_speed = ai_speed * 0.7f; react_x = WIDTH / 4.0f; }
+    	    else if (currentMode == PVE_HARD) { ai_speed = ai_speed * 1.1f; react_x = 0.0f; }
     	    
     	    if (ball_x > react_x) {
         	    float paddle2_center = paddle2_y + paddle2_height / 2;
-        	    if (ball_y > paddle2_center + 10 && paddle2_y < HEIGHT - paddle2_height) {
+        	    bool ai_wants_up = (ball_y > paddle2_center + 10 && paddle2_y < HEIGHT - paddle2_height);
+        	    bool ai_wants_down = (ball_y < paddle2_center - 10 && paddle2_y > 0);
+        	    
+        	    if (p2_emp_frames > 0) { bool temp = ai_wants_down; ai_wants_down = ai_wants_up; ai_wants_up = temp; }
+        	    
+        	    if (ai_wants_up) {
         	        paddle2_y += ai_speed;
-        	    } else if (ball_y < paddle2_center - 10 && paddle2_y > 0) {
+        	    } else if (ai_wants_down) {
         	        paddle2_y -= ai_speed;
         	    }
     	    }
@@ -447,11 +537,11 @@ void update_physics()
     	    // AI Special Usage (Medium & Hard)
     	    if (special_charge_2 >= 100 && ball_dx > 0) {
     	        if (currentMode == PVE_MED && ball_x > WIDTH * 0.6f && (rand() % 100) < 2) {
+    	            trigger_skill(2, p2_loadout[rand() % 3]);
     	            special_charge_2 = 0;
-    	            p2_shield_frames = 300;
     	        } else if (currentMode == PVE_HARD && ball_x > WIDTH * 0.4f && (rand() % 100) < 5) {
+    	            trigger_skill(2, p2_loadout[rand() % 3]);
     	            special_charge_2 = 0;
-    	            p2_shield_frames = 300;
     	        }
     	    }
     	}

@@ -226,6 +226,22 @@
             background: white;
             color: black;
         }
+        
+        .retro-select {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            font-family: inherit;
+            font-size: 0.8rem;
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .retro-select option {
+            background: black;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -269,11 +285,31 @@
             
             <div id="opponent-menu-view" style="display:none; flex-direction:column; align-items:center;">
                 <h2 style="margin-bottom:20px;">Select Opponent</h2>
-                <button onclick="startGame(1)">Player vs Player</button>
-                <button onclick="startGame(2)">Player vs AI (Easy)</button>
-                <button onclick="startGame(3)">Player vs AI (Medium)</button>
-                <button onclick="startGame(4)">Player vs AI (Hard)</button>
+                <button onclick="showLoadoutMenu(1)">Player vs Player</button>
+                <button onclick="showLoadoutMenu(2)">Player vs AI (Easy)</button>
+                <button onclick="showLoadoutMenu(3)">Player vs AI (Medium)</button>
+                <button onclick="showLoadoutMenu(4)">Player vs AI (Hard)</button>
                 <button onclick="showModeMenu()">Back</button>
+            </div>
+            
+            <div id="loadout-menu-view" style="display:none; flex-direction:column; align-items:center; z-index: 20; width: 800px; max-width: 100%;">
+                <h2 style="margin-bottom:20px;">SKILL LOADOUT</h2>
+                <div style="display: flex; gap: 40px; text-align: center; margin-bottom: 20px; width: 100%; justify-content: center;">
+                    <div style="flex: 1;">
+                        <h3 style="color:#aaa;">PLAYER 1</h3>
+                        <p style="font-size: 0.7rem;">Forward</p> <select id="p1-fwd" class="retro-select"></select>
+                        <p style="font-size: 0.7rem;">Backward</p> <select id="p1-bwd" class="retro-select"></select>
+                        <p style="font-size: 0.7rem;">Neutral</p> <select id="p1-neu" class="retro-select"></select>
+                    </div>
+                    <div id="p2-loadout-block" style="flex: 1;">
+                        <h3 style="color:#aaa;">PLAYER 2</h3>
+                        <p style="font-size: 0.7rem;">Forward</p> <select id="p2-fwd" class="retro-select"></select>
+                        <p style="font-size: 0.7rem;">Backward</p> <select id="p2-bwd" class="retro-select"></select>
+                        <p style="font-size: 0.7rem;">Neutral</p> <select id="p2-neu" class="retro-select"></select>
+                    </div>
+                </div>
+                <button onclick="startGameActual()" style="margin-top: 20px;">START MATCH</button>
+                <button onclick="goBackToOpponentMenu()">Back</button>
             </div>
             
             <div id="settings-menu-view" style="display:none; flex-direction:column; align-items:center; z-index: 20;">
@@ -283,13 +319,17 @@
                         <h3 style="color:#aaa;">PLAYER 1</h3>
                         <button class="bind-btn" onclick="listenKey(0, this)">UP: W</button>
                         <button class="bind-btn" onclick="listenKey(1, this)">DOWN: S</button>
-                        <button class="bind-btn" onclick="listenKey(2, this)">SPECIAL: SPACE</button>
+                        <button class="bind-btn" onclick="listenKey(7, this)">FORWARD: D</button>
+                        <button class="bind-btn" onclick="listenKey(8, this)">BACKWARD: A</button>
+                        <button class="bind-btn" onclick="listenKey(2, this)">NEUTRAL: SPACE</button>
                     </div>
                     <div>
                         <h3 style="color:#aaa;">PLAYER 2</h3>
                         <button class="bind-btn" onclick="listenKey(3, this)">UP: ARROW UP</button>
                         <button class="bind-btn" onclick="listenKey(4, this)">DOWN: ARROW DOWN</button>
-                        <button class="bind-btn" onclick="listenKey(5, this)">SPECIAL: NUM 0</button>
+                        <button class="bind-btn" onclick="listenKey(9, this)">FORWARD: ARROW LEFT</button>
+                        <button class="bind-btn" onclick="listenKey(10, this)">BACKWARD: ARROW RIGHT</button>
+                        <button class="bind-btn" onclick="listenKey(5, this)">NEUTRAL: NUM 0</button>
                     </div>
                 </div>
                 <button class="bind-btn" onclick="listenKey(6, this)" style="margin-bottom: 20px;">PAUSE: ENTER</button>
@@ -432,6 +472,7 @@
             document.getElementById('main-menu-view').style.display = 'none';
             document.getElementById('mode-menu-view').style.display = 'flex';
             document.getElementById('opponent-menu-view').style.display = 'none';
+            document.getElementById('loadout-menu-view').style.display = 'none';
         }
         function selectMode(rules) {
             selectedRules = rules;
@@ -440,10 +481,40 @@
             document.getElementById('opponent-menu-view').style.display = 'flex';
         }
 
-        function startGame(opponent) {
-            if (Module && Module._start_game) {
-                Module._start_game(selectedRules, opponent);
+        let selectedOpponent = 1;
+        function showLoadoutMenu(opponent) {
+            selectedOpponent = opponent;
+            document.getElementById('opponent-menu-view').style.display = 'none';
+            document.getElementById('loadout-menu-view').style.display = 'flex';
+            
+            if (opponent === 1) {
+                document.getElementById('p2-loadout-block').style.display = 'block';
+            } else {
+                document.getElementById('p2-loadout-block').style.display = 'none';
             }
+        }
+        function goBackToOpponentMenu() {
+            document.getElementById('loadout-menu-view').style.display = 'none';
+            document.getElementById('opponent-menu-view').style.display = 'flex';
+        }
+        function startGameActual() {
+            if (Module && Module._set_loadout) {
+                const p1f = parseInt(document.getElementById('p1-fwd').value);
+                const p1b = parseInt(document.getElementById('p1-bwd').value);
+                const p1n = parseInt(document.getElementById('p1-neu').value);
+                Module._set_loadout(1, p1f, p1b, p1n);
+                
+                if (selectedOpponent === 1) {
+                    const p2f = parseInt(document.getElementById('p2-fwd').value);
+                    const p2b = parseInt(document.getElementById('p2-bwd').value);
+                    const p2n = parseInt(document.getElementById('p2-neu').value);
+                    Module._set_loadout(2, p2f, p2b, p2n);
+                }
+            }
+            if (Module && Module._start_game) {
+                Module._start_game(selectedRules, selectedOpponent);
+            }
+            document.getElementById('loadout-menu-view').style.display = 'none';
         }
         
         function resumeGame() {
@@ -488,11 +559,15 @@
         const defaultBinds = [
             { id: 0, text: "UP", keyText: "W", key: 119, isSpecial: false },
             { id: 1, text: "DOWN", keyText: "S", key: 115, isSpecial: false },
-            { id: 2, text: "SPECIAL", keyText: "SPACE", key: 32, isSpecial: false },
+            { id: 2, text: "NEUTRAL", keyText: "SPACE", key: 32, isSpecial: false },
             { id: 3, text: "UP", keyText: "ARROW UP", key: 101, isSpecial: true },
             { id: 4, text: "DOWN", keyText: "ARROW DOWN", key: 103, isSpecial: true },
-            { id: 5, text: "SPECIAL", keyText: "NUM 0", key: 48, isSpecial: false },
-            { id: 6, text: "PAUSE", keyText: "ENTER", key: 13, isSpecial: false }
+            { id: 5, text: "NEUTRAL", keyText: "NUM 0", key: 48, isSpecial: false },
+            { id: 6, text: "PAUSE", keyText: "ENTER", key: 13, isSpecial: false },
+            { id: 7, text: "FORWARD", keyText: "D", key: 100, isSpecial: false },
+            { id: 8, text: "BACKWARD", keyText: "A", key: 97, isSpecial: false },
+            { id: 9, text: "FORWARD", keyText: "ARROW LEFT", key: 100, isSpecial: true },
+            { id: 10, text: "BACKWARD", keyText: "ARROW RIGHT", key: 102, isSpecial: true }
         ];
         
         let currentBinds = JSON.parse(localStorage.getItem('pongBinds')) || defaultBinds;
@@ -519,6 +594,30 @@
         }
         
         document.addEventListener('DOMContentLoaded', updateBindButtons);
+        
+        const skillsList = [
+            { id: 1, name: 'SMASH (Straight Fast)' },
+            { id: 2, name: 'SHIELD (Bigger Paddle)' },
+            { id: 3, name: 'GHOST (Invisible Ball)' },
+            { id: 4, name: 'BLINK (Teleport Ball)' },
+            { id: 5, name: 'FREEZE (Slow Opponent)' },
+            { id: 6, name: 'EMP (Reverse Controls)' }
+        ];
+        
+        function populateLoadoutDropdowns() {
+            const selects = ['p1-fwd', 'p1-bwd', 'p1-neu', 'p2-fwd', 'p2-bwd', 'p2-neu'];
+            selects.forEach((id, index) => {
+                const el = document.getElementById(id);
+                skillsList.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.innerText = s.name;
+                    el.appendChild(opt);
+                });
+                el.value = (index % 3) + 1;
+            });
+        }
+        document.addEventListener('DOMContentLoaded', populateLoadoutDropdowns);
         
         let listeningBtn = null;
         let listeningId = -1;
