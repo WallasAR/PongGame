@@ -443,8 +443,9 @@
                 lastScore2 = score2;
             }
             
-            document.getElementById('menu-overlay').style.display = isMenu ? 'flex' : 'none';
-            document.getElementById('pause-overlay').style.display = (isPaused && !isMenu) ? 'flex' : 'none';
+            let isSettingsActive = document.getElementById('settings-menu-view').style.display === 'flex';
+            document.getElementById('menu-overlay').style.display = (isMenu || isSettingsActive) ? 'flex' : 'none';
+            document.getElementById('pause-overlay').style.display = (isPaused && !isMenu && !isSettingsActive) ? 'flex' : 'none';
             
             document.getElementById('special1').style.width = spec1 + '%';
             document.getElementById('special2').style.width = spec2 + '%';
