@@ -145,6 +145,44 @@ void initExplosion(float x, float y) {
     }
 }
 
+void initHitExplosion(float x, float y, float dir_x) {
+    int spawned = 0;
+    for (int i = 0; i < NUM_PARTICLES; i++) {
+        if (particles[i].life <= 0) {
+            particles[i].x = x;
+            particles[i].y = y;
+            float angle = ((rand() % 120) - 60) * 3.14159f / 180.0f; // Cone angle
+            if (dir_x < 0) angle += 3.14159f; 
+            float speed = (rand() % 50) / 10.0f + 2.0f;
+            particles[i].dx = cos(angle) * speed;
+            particles[i].dy = sin(angle) * speed;
+            particles[i].life = 10 + rand() % 10;
+            particles[i].r = 1.0f; particles[i].g = 1.0f; particles[i].b = 1.0f;
+            spawned++;
+            if (spawned >= 30) break; // Only spawn 30 particles per hit
+        }
+    }
+}
+
+struct TrailPoint {
+    float x, y;
+    int life;
+};
+#define MAX_TRAILS 40
+TrailPoint paddle1_trail[MAX_TRAILS];
+TrailPoint paddle2_trail[MAX_TRAILS];
+TrailPoint ball_trail[MAX_TRAILS];
+int p1_trail_idx = 0;
+int p2_trail_idx = 0;
+int ball_trail_idx = 0;
+
+void add_trail(TrailPoint trail[], int& idx, float x, float y) {
+    trail[idx].x = x;
+    trail[idx].y = y;
+    trail[idx].life = 12;
+    idx = (idx + 1) % MAX_TRAILS;
+}
+
 void initDoubleWallExplosion(float left_x, float right_x, float width) {
     for (int i = 0; i < NUM_PARTICLES; i++) {
         if (i % 2 == 0) {
@@ -353,19 +391,54 @@ void display()
  	
  	glVertex2f(paddle2_x, paddle2_y);
  	glVertex2f(paddle2_x + PADDLE_WIDTH, paddle2_y + paddle2_height);
- 	glVertex2f(paddle2_x, paddle2_y + paddle2_height);
- 	glEnd();
+        float dx = (rand() % 20 - 10) / 2.0f;
+        float dy = (rand() % 20 - 10) / 2.0f;
+        glTranslatef(dx, dy, 0.0f);
+    }
+    
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    // Particulas
-    glPointSize(3.0f);
-    glBegin(GL_POINTS);
-    for (int i = 0; i < NUM_PARTICLES; i++) {
-        if (particles[i].life > 0) {
-            glColor3f(particles[i].r, particles[i].g, particles[i].b);
-            glVertex2f(particles[i].x, particles[i].y);
+    // Draw Trails
+    for (int i=0; i<MAX_TRAILS; i++) {
+        if (paddle1_trail[i].life > 0) {
+            float alpha = paddle1_trail[i].life / 12.0f * 0.4f;
+            glColor4f(1.0f, 1.0f, 1.0f, alpha);
+            glRectf(paddle1_trail[i].x, paddle1_trail[i].y, paddle1_trail[i].x + PADDLE_WIDTH, paddle1_trail[i].y + paddle1_height);
+        }
+        if (paddle2_trail[i].life > 0) {
+            float alpha = paddle2_trail[i].life / 12.0f * 0.4f;
+            glColor4f(1.0f, 1.0f, 1.0f, alpha);
+            glRectf(paddle2_trail[i].x, paddle2_trail[i].y, paddle2_trail[i].x + PADDLE_WIDTH, paddle2_trail[i].y + paddle2_height);
+        }
+        if (ball_trail[i].life > 0 && ghost_frames <= 0) {
+            float alpha = ball_trail[i].life / 12.0f * 0.6f;
+            glColor4f(1.0f, 1.0f, 1.0f, alpha);
+            glBegin(GL_QUADS);
+            glVertex2f(ball_trail[i].x - BALL_RADIUS, ball_trail[i].y - BALL_RADIUS);
+            glVertex2f(ball_trail[i].x + BALL_RADIUS, ball_trail[i].y - BALL_RADIUS);
+            glVertex2f(ball_trail[i].x + BALL_RADIUS, ball_trail[i].y + BALL_RADIUS);
+            glVertex2f(ball_trail[i].x - BALL_RADIUS, ball_trail[i].y + BALL_RADIUS);
+            glEnd();
         }
     }
-    glEnd();
+    
+    // Draw Particles
+    for (int i = 0; i < NUM_PARTICLES; i++) {
+        if (particles[i].life > 0) {
+            float alpha = particles[i].life / 40.0f;
+            if (alpha > 1.0f) alpha = 1.0f;
+            glColor4f(particles[i].r, particles[i].g, particles[i].b, alpha);
+            glBegin(GL_QUADS);
+            glVertex2f(particles[i].x - 2, particles[i].y - 2);
+            glVertex2f(particles[i].x + 2, particles[i].y - 2);
+            glVertex2f(particles[i].x + 2, particles[i].y + 2);
+            glVertex2f(particles[i].x - 2, particles[i].y + 2);
+            glEnd();
+        }
+    }
+    
+    glDisable(GL_BLEND);
 
 #ifndef __EMSCRIPTEN__
     if (shake_frames == 0) {
@@ -484,8 +557,14 @@ void update_physics()
 	    }
 	    
     	// Mover as paletas (sempre ativas, mesmo durante delays)
-    	// Player 01
-        bool p1_down_pressed = p1_down_spec ? specialKeys[key_p1_down] : (keys[key_p1_down] || (key_p1_down >= 'a' && key_p1_down <= 'z' && keys[key_p1_down - 32]));
+	        // Track previous positions for trails
+	        float old_p1_y = paddle1_y;
+	        float old_p2_y = paddle2_y;
+	        float old_ball_x = ball_x;
+	        float old_ball_y = ball_y;
+
+	        // Player 01
+	        bool p1_down_pressed = p1_down_spec ? specialKeys[key_p1_down] : (keys[key_p1_down] || (key_p1_down >= 'a' && key_p1_down <= 'z' && keys[key_p1_down - 32]));
         bool p1_up_pressed = p1_up_spec ? specialKeys[key_p1_up] : (keys[key_p1_up] || (key_p1_up >= 'a' && key_p1_up <= 'z' && keys[key_p1_up - 32]));
         
         if (p1_emp_frames > 0) { bool temp = p1_down_pressed; p1_down_pressed = p1_up_pressed; p1_up_pressed = temp; }
@@ -545,14 +624,23 @@ void update_physics()
     	        }
     	    }
     	}
+    	
+    	if (abs(paddle1_y - old_p1_y) > 0.5f) add_trail(paddle1_trail, p1_trail_idx, paddle1_x, paddle1_y);
+    	if (abs(paddle2_y - old_p2_y) > 0.5f) add_trail(paddle2_trail, p2_trail_idx, paddle2_x, paddle2_y);
+    	add_trail(ball_trail, ball_trail_idx, ball_x, ball_y);
 
-        // Atualizar Particulas sempre (independente do shake pause)
+        // Atualizar Particulas e Trails sempre
         for (int i = 0; i < NUM_PARTICLES; i++) {
             if (particles[i].life > 0) {
                 particles[i].x += particles[i].dx;
                 particles[i].y += particles[i].dy;
                 particles[i].life--;
             }
+        }
+        for (int i=0; i<MAX_TRAILS; i++) {
+            if (paddle1_trail[i].life > 0) paddle1_trail[i].life--;
+            if (paddle2_trail[i].life > 0) paddle2_trail[i].life--;
+            if (ball_trail[i].life > 0) ball_trail[i].life--;
         }
 
 	    if (shake_frames > 0) {
@@ -611,8 +699,14 @@ void update_physics()
 		if ((ball_x >= paddle1_x && ball_x <= paddle1_x + PADDLE_WIDTH + 10) && (ball_y + BALL_RADIUS >= paddle1_y && ball_y - BALL_RADIUS <= paddle1_y + paddle1_height))
 		{
 			ball_dx = -ball_dx;
-			ball_dx += (ball_dx > 0 ? 0.5f : -0.5f); // Pequeno incremento de velocidade
-			ball_dy += (ball_dy > 0 ? 0.5f : -0.5f);
+			ball_dx *= 1.10f; // 10% speed increase per hit
+			ball_dy *= 1.10f;
+            if (ball_dx > 18.0f) ball_dx = 18.0f;
+            if (ball_dx < -18.0f) ball_dx = -18.0f;
+            if (ball_dy > 18.0f) ball_dy = 18.0f;
+            if (ball_dy < -18.0f) ball_dy = -18.0f;
+            
+            initHitExplosion(ball_x, ball_y, ball_dx);
 			
 			if (p1_fireball_active) {
 			    ball_dx *= 1.5f;
@@ -630,6 +724,14 @@ void update_physics()
 		else if ((ball_x >= paddle2_x - 10 && ball_x <= paddle2_x + PADDLE_WIDTH) && (ball_y + BALL_RADIUS >= paddle2_y && ball_y - BALL_RADIUS <= paddle2_y + paddle2_height))
 		{
 		   	ball_dx = -ball_dx;
+			ball_dx *= 1.10f; // 10% speed increase per hit
+			ball_dy *= 1.10f;
+            if (ball_dx > 18.0f) ball_dx = 18.0f;
+            if (ball_dx < -18.0f) ball_dx = -18.0f;
+            if (ball_dy > 18.0f) ball_dy = 18.0f;
+            if (ball_dy < -18.0f) ball_dy = -18.0f;
+		   	
+		   	initHitExplosion(ball_x, ball_y, ball_dx);
 		   	
 		   	special_charge_2 += 20;
 		   	if (special_charge_2 > 100) special_charge_2 = 100;
