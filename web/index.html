@@ -81,12 +81,12 @@
         }
         .pulse-text { animation: pulse 2s infinite; }
 
-        /* Wrapper para o canvas e overlays */
         .canvas-wrapper {
             position: relative;
             display: inline-block;
             box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
             margin-bottom: 20px;
+            container-type: inline-size;
         }
 
         .skull-zone {
@@ -100,25 +100,26 @@
         }
         .skull-inner {
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            color: #aa0000;
-            font-size: 48px;
-            font-family: monospace;
-            line-height: 56px;
-            letter-spacing: 20px;
-            white-space: break-spaces;
-            word-wrap: break-word;
-            opacity: 0.3;
-            text-shadow: 0 0 10px #ff0000;
-            transform: rotate(45deg);
+            top: 0; left: 0; bottom: 0; right: 0;
             display: flex;
-            align-content: center;
-            justify-content: center;
-            flex-wrap: wrap;
-            text-align: center;
+            flex-direction: row;
+            color: #aa0000;
+            opacity: 0.3;
+        }
+        .skull-col {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            align-items: center;
+            flex: 1;
+            height: 100%;
+        }
+        .skull-char {
+            display: inline-block;
+            transform: rotate(45deg);
+            font-size: 6cqi;
+            text-shadow: 0 0 5px #ff0000;
+            line-height: 1;
         }
 
 
@@ -305,10 +306,7 @@
         let currentDx = 0;
         let currentDy = 0;
         
-        // Generate a lot of skulls for the text content
-        const skullPattern = " ☠ ".repeat(150);
-        document.getElementById('skull-inner-l').innerText = skullPattern;
-        document.getElementById('skull-inner-r').innerText = skullPattern;
+        let lastDrawWidth = -1; // To avoid regenerating HTML every frame
         
         window.updateUI = function(score1, score2, isMenu, isPaused, bX, bY, showBall, dx, dy, spec1, spec2, timerFrames, deadZoneWidth) {
             if (score1 !== lastScore1) {
@@ -354,6 +352,16 @@
                     skullL.style.width = (currentDrawWidth / 960 * 100) + '%';
                     skullR.style.width = (currentDrawWidth / 960 * 100) + '%';
                     
+                    // Generate new columns if width changed
+                    if (currentDrawWidth !== lastDrawWidth) {
+                        lastDrawWidth = currentDrawWidth;
+                        let numCols = Math.max(1, Math.floor(currentDrawWidth / 60));
+                        let skullColHtml = '<div class="skull-col">' + '<span class="skull-char">☠</span>'.repeat(8) + '</div>';
+                        let allHtml = skullColHtml.repeat(numCols);
+                        skullInnerL.innerHTML = allHtml;
+                        skullInnerR.innerHTML = allHtml;
+                    }
+                    
                     // Flash skulls if it's about to shrink
                     if (isWarning && (timerFrames % 30) > 15) {
                         skullInnerL.style.color = '#ff0000'; // Bright red
@@ -369,11 +377,13 @@
                 } else {
                     skullL.style.display = 'none';
                     skullR.style.display = 'none';
+                    lastDrawWidth = 0;
                 }
             } else {
                 timerEl.style.display = 'none';
                 skullL.style.display = 'none';
                 skullR.style.display = 'none';
+                lastDrawWidth = -1;
             }
             
             currentDx = dx;
