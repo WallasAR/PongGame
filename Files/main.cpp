@@ -324,10 +324,10 @@ void display()
         glTranslatef(ball_x, ball_y, 0);
         glBegin(GL_QUADS);
         glColor3f(1.0, 1.0, 1.0);
-        glVertex2f(-BALL_SIZE, -BALL_SIZE);
-        glVertex2f(BALL_SIZE, -BALL_SIZE);
-        glVertex2f(BALL_SIZE, BALL_SIZE);
-        glVertex2f(-BALL_SIZE, BALL_SIZE);
+        glVertex2f(-BALL_RADIUS, -BALL_RADIUS);
+        glVertex2f(BALL_RADIUS, -BALL_RADIUS);
+        glVertex2f(BALL_RADIUS, BALL_RADIUS);
+        glVertex2f(-BALL_RADIUS, BALL_RADIUS);
         glEnd();
         glPopMatrix();
     }
@@ -391,11 +391,10 @@ void display()
  	
  	glVertex2f(paddle2_x, paddle2_y);
  	glVertex2f(paddle2_x + PADDLE_WIDTH, paddle2_y + paddle2_height);
-        float dx = (rand() % 20 - 10) / 2.0f;
-        float dy = (rand() % 20 - 10) / 2.0f;
-        glTranslatef(dx, dy, 0.0f);
-    }
-    
+ 	glVertex2f(paddle2_x, paddle2_y + paddle2_height);
+ 	glEnd();
+ 	
+ 	// Rest of draw...
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
@@ -404,12 +403,22 @@ void display()
         if (paddle1_trail[i].life > 0) {
             float alpha = paddle1_trail[i].life / 12.0f * 0.4f;
             glColor4f(1.0f, 1.0f, 1.0f, alpha);
-            glRectf(paddle1_trail[i].x, paddle1_trail[i].y, paddle1_trail[i].x + PADDLE_WIDTH, paddle1_trail[i].y + paddle1_height);
+            glBegin(GL_QUADS);
+            glVertex2f(paddle1_trail[i].x, paddle1_trail[i].y);
+            glVertex2f(paddle1_trail[i].x + PADDLE_WIDTH, paddle1_trail[i].y);
+            glVertex2f(paddle1_trail[i].x + PADDLE_WIDTH, paddle1_trail[i].y + paddle1_height);
+            glVertex2f(paddle1_trail[i].x, paddle1_trail[i].y + paddle1_height);
+            glEnd();
         }
         if (paddle2_trail[i].life > 0) {
             float alpha = paddle2_trail[i].life / 12.0f * 0.4f;
             glColor4f(1.0f, 1.0f, 1.0f, alpha);
-            glRectf(paddle2_trail[i].x, paddle2_trail[i].y, paddle2_trail[i].x + PADDLE_WIDTH, paddle2_trail[i].y + paddle2_height);
+            glBegin(GL_QUADS);
+            glVertex2f(paddle2_trail[i].x, paddle2_trail[i].y);
+            glVertex2f(paddle2_trail[i].x + PADDLE_WIDTH, paddle2_trail[i].y);
+            glVertex2f(paddle2_trail[i].x + PADDLE_WIDTH, paddle2_trail[i].y + paddle2_height);
+            glVertex2f(paddle2_trail[i].x, paddle2_trail[i].y + paddle2_height);
+            glEnd();
         }
         if (ball_trail[i].life > 0 && ghost_frames <= 0) {
             float alpha = ball_trail[i].life / 12.0f * 0.6f;
