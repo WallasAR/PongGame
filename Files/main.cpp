@@ -82,9 +82,10 @@ void initExplosion(float x, float y) {
         particles[i].dx = cos(angle) * speed;
         particles[i].dy = sin(angle) * speed;
         particles[i].life = 20 + rand() % 20; // 20 to 40 frames
-        particles[i].r = (rand() % 100) / 100.0f + 0.5f;
-        particles[i].g = (rand() % 100) / 100.0f;
-        particles[i].b = (rand() % 100) / 100.0f + 0.5f; // Purple/Pink neon bias
+        float gray = (rand() % 100) / 100.0f;
+        particles[i].r = gray + 0.2f;
+        particles[i].g = gray + 0.2f;
+        particles[i].b = gray + 0.2f;
     }
 }
 
@@ -103,9 +104,10 @@ void initDoubleWallExplosion(float left_x, float right_x, float width) {
         particles[i].dx = cos(angle) * speed;
         particles[i].dy = sin(angle) * speed;
         particles[i].life = 30 + rand() % 30; // longer life
-        particles[i].r = (rand() % 100) / 100.0f + 0.5f;
-        particles[i].g = (rand() % 100) / 100.0f;
-        particles[i].b = (rand() % 100) / 100.0f + 0.5f;
+        float gray = (rand() % 100) / 100.0f;
+        particles[i].r = gray + 0.2f;
+        particles[i].g = gray + 0.2f;
+        particles[i].b = gray + 0.2f;
     }
 }
 
