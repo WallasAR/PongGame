@@ -413,6 +413,17 @@ void update_physics()
         	        paddle2_y -= ai_speed;
         	    }
     	    }
+    	    
+    	    // AI Special Usage (Medium & Hard)
+    	    if (special_charge_2 >= 100 && ball_dx > 0) {
+    	        if (currentMode == PVE_MED && ball_x > WIDTH * 0.6f && (rand() % 100) < 2) {
+    	            special_charge_2 = 0;
+    	            p2_shield_frames = 300;
+    	        } else if (currentMode == PVE_HARD && ball_x > WIDTH * 0.4f && (rand() % 100) < 5) {
+    	            special_charge_2 = 0;
+    	            p2_shield_frames = 300;
+    	        }
+    	    }
     	}
 
         // Atualizar Particulas sempre (independente do shake pause)
