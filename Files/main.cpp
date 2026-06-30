@@ -62,6 +62,30 @@ float paddle2_height = PADDLE_HEIGHT;
 bool keys[256] = {false};
 bool specialKeys[256] = {false};
 
+// Configurable Keys
+int key_p1_up = 'w'; bool p1_up_spec = false;
+int key_p1_down = 's'; bool p1_down_spec = false;
+int key_p1_spec = ' '; bool p1_spec_spec = false;
+
+int key_p2_up = GLUT_KEY_UP; bool p2_up_spec = true;
+int key_p2_down = GLUT_KEY_DOWN; bool p2_down_spec = true;
+int key_p2_spec = '0'; bool p2_spec_spec = false;
+
+int key_pause = 13; bool pause_spec = false;
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_key_bind(int action_id, int new_key, bool is_special) {
+        if (action_id == 0) { key_p1_up = new_key; p1_up_spec = is_special; }
+        else if (action_id == 1) { key_p1_down = new_key; p1_down_spec = is_special; }
+        else if (action_id == 2) { key_p1_spec = new_key; p1_spec_spec = is_special; }
+        else if (action_id == 3) { key_p2_up = new_key; p2_up_spec = is_special; }
+        else if (action_id == 4) { key_p2_down = new_key; p2_down_spec = is_special; }
+        else if (action_id == 5) { key_p2_spec = new_key; p2_spec_spec = is_special; }
+        else if (action_id == 6) { key_pause = new_key; pause_spec = is_special; }
+    }
+}
+
+
 // Efeitos Arcade
 int shake_frames = 0;
 int respawn_delay_frames = 0;
@@ -171,19 +195,16 @@ void keyboard(unsigned char key, int x, int y)
         else if (key == '4') { currentMode = PVE_HARD; currentState = PLAYING; score1 = 0; score2 = 0; ball_x = WIDTH/2; ball_y = HEIGHT/2; }
         return;
     }
-    
+    bool is_pause = pause_spec ? false : (key == key_pause || (key_pause >= 'a' && key_pause <= 'z' && key == key_pause - 32));
+    if (is_pause) {
+        if (Gamepaused == false) {
+            pauseGame();
+        } else {
+            resumeGame();
+        }
+    }
 	switch(key)
 	{
-	case 13: // 13 eh o ENTER
-		if(Gamepaused == false)
-		{
-			pauseGame();
-		}	
-		else 
-		{
-			resumeGame();
-		}
-		break;
 	case 'm':
 	case 'M':
 	    currentState = MENU; // Voltar ao menu
@@ -367,11 +388,14 @@ void update_physics()
 	        }
 	        
 	        // Process Abilities
-	        if (keys[' '] && special_charge_1 >= 100) {
+            bool p1_spec_pressed = p1_spec_spec ? specialKeys[key_p1_spec] : (keys[key_p1_spec] || (key_p1_spec >= 'a' && key_p1_spec <= 'z' && keys[key_p1_spec - 32]));
+	        if (p1_spec_pressed && special_charge_1 >= 100) {
 	            special_charge_1 = 0;
 	            p1_fireball_active = true;
 	        }
-	        if (keys['0'] && special_charge_2 >= 100) {
+            
+            bool p2_spec_pressed = p2_spec_spec ? specialKeys[key_p2_spec] : (keys[key_p2_spec] || (key_p2_spec >= 'a' && key_p2_spec <= 'z' && keys[key_p2_spec - 32]));
+	        if (p2_spec_pressed && special_charge_2 >= 100) {
 	            special_charge_2 = 0;
 	            p2_shield_frames = 300; // 5 seconds
 	        }
@@ -382,19 +406,25 @@ void update_physics()
 	    
     	// Mover as paletas (sempre ativas, mesmo durante delays)
     	// Player 01
-    	if ((keys['s'] || keys['S']) && paddle1_y > 0) {
+        bool p1_down_pressed = p1_down_spec ? specialKeys[key_p1_down] : (keys[key_p1_down] || (key_p1_down >= 'a' && key_p1_down <= 'z' && keys[key_p1_down - 32]));
+        bool p1_up_pressed = p1_up_spec ? specialKeys[key_p1_up] : (keys[key_p1_up] || (key_p1_up >= 'a' && key_p1_up <= 'z' && keys[key_p1_up - 32]));
+
+    	if (p1_down_pressed && paddle1_y > 0) {
     	    paddle1_y -= PADDLE_SPEED;
     	}
-    	if ((keys['w'] || keys['W']) && paddle1_y < HEIGHT - paddle1_height) {
+    	if (p1_up_pressed && paddle1_y < HEIGHT - paddle1_height) {
     	    paddle1_y += PADDLE_SPEED;
     	}
     
     	// Player 02
     	if (currentMode == PVP) {
-        	if (specialKeys[GLUT_KEY_DOWN] && paddle2_y > 0) {
+            bool p2_down_pressed = p2_down_spec ? specialKeys[key_p2_down] : (keys[key_p2_down] || (key_p2_down >= 'a' && key_p2_down <= 'z' && keys[key_p2_down - 32]));
+            bool p2_up_pressed = p2_up_spec ? specialKeys[key_p2_up] : (keys[key_p2_up] || (key_p2_up >= 'a' && key_p2_up <= 'z' && keys[key_p2_up - 32]));
+
+        	if (p2_down_pressed && paddle2_y > 0) {
         	    paddle2_y -= PADDLE_SPEED;
         	}
-        	if (specialKeys[GLUT_KEY_UP] && paddle2_y < HEIGHT - paddle2_height) {
+        	if (p2_up_pressed && paddle2_y < HEIGHT - paddle2_height) {
         	    paddle2_y += PADDLE_SPEED;
         	}
     	} else {
@@ -531,7 +561,6 @@ extern "C" {
         else if (opponent == 2) currentMode = PVE_EASY;
         else if (opponent == 3) currentMode = PVE_MED;
         else if (opponent == 4) currentMode = PVE_HARD;
-        
         currentState = PLAYING;
         Gamepaused = false;
         score1 = 0; score2 = 0; 

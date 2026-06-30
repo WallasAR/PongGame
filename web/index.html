@@ -257,6 +257,7 @@
             
             <div id="main-menu-view" style="display:flex; flex-direction:column; align-items:center;">
                 <button onclick="showModeMenu()">PLAY</button>
+                <button onclick="showSettingsMenu()">SETTINGS</button>
             </div>
             
             <div id="mode-menu-view" style="display:none; flex-direction:column; align-items:center;">
@@ -274,12 +275,33 @@
                 <button onclick="startGame(4)">Player vs AI (Hard)</button>
                 <button onclick="showModeMenu()">Back</button>
             </div>
+            
+            <div id="settings-menu-view" style="display:none; flex-direction:column; align-items:center; z-index: 20;">
+                <h2 style="margin-bottom:20px;">CONTROLS</h2>
+                <div style="display: flex; gap: 40px; text-align: left; margin-bottom: 20px; z-index: 20;">
+                    <div>
+                        <h3 style="color:#aaa;">PLAYER 1</h3>
+                        <button class="bind-btn" onclick="listenKey(0, this)">UP: W</button>
+                        <button class="bind-btn" onclick="listenKey(1, this)">DOWN: S</button>
+                        <button class="bind-btn" onclick="listenKey(2, this)">SPECIAL: SPACE</button>
+                    </div>
+                    <div>
+                        <h3 style="color:#aaa;">PLAYER 2</h3>
+                        <button class="bind-btn" onclick="listenKey(3, this)">UP: ARROW UP</button>
+                        <button class="bind-btn" onclick="listenKey(4, this)">DOWN: ARROW DOWN</button>
+                        <button class="bind-btn" onclick="listenKey(5, this)">SPECIAL: NUM 0</button>
+                    </div>
+                </div>
+                <button class="bind-btn" onclick="listenKey(6, this)" style="margin-bottom: 20px;">PAUSE: ENTER</button>
+                <button onclick="closeSettingsMenu()">Back</button>
+            </div>
         </div>
         
         <!-- Pause Menu Overlay -->
-        <div id="pause-overlay" class="menu-overlay">
+            <div id="pause-overlay" class="menu-overlay">
             <h1>PAUSED</h1>
             <button onclick="resumeGame()">Resume</button>
+            <button onclick="showSettingsMenu()">Settings</button>
             <button onclick="restartGame()">Restart Match</button>
             <button onclick="quitToMenu()">Quit to Menu</button>
         </div>
@@ -294,27 +316,8 @@
             
             <pre id="ascii-ball"></pre>
         </div>
-    </div>
-
-    <div class="controls">
-        <div class="player-controls">
-            <h3>Player 1</h3>
-            <p>Subir: <span class="key">W</span></p>
-            <p>Descer: <span class="key">S</span></p>
-            <p>Especial: <span class="key">Espaço</span></p>
-        </div>
-        <div class="player-controls" style="padding-left: 40px;">
-            <h3>Geral</h3>
-            <p>Pausar: <span class="key">Enter</span></p>
-        </div>
-        <div class="player-controls" style="padding-left: 40px;">
-            <h3>Player 2</h3>
-            <p>Subir: <span class="key">↑</span></p>
-            <p>Descer: <span class="key">↓</span></p>
-            <p>Especial: <span class="key">Numpad 0</span></p>
-        </div>
-    </div>
-
+    </div>    </div>
+    
     <script>
         // Função para atualizar o placar e UI vindo do C++
         let lastScore1 = 0;
@@ -452,6 +455,122 @@
         function quitToMenu() {
             if (Module && Module._trigger_action) Module._trigger_action(2);
             showMainMenu(); // Reset the UI state
+        }
+
+        let isSettingsFromPause = false;
+        
+        function showSettingsMenu() {
+            isSettingsFromPause = document.getElementById('pause-overlay').style.display === 'flex';
+            document.getElementById('main-menu-view').style.display = 'none';
+            document.getElementById('mode-menu-view').style.display = 'none';
+            document.getElementById('opponent-menu-view').style.display = 'none';
+            document.getElementById('pause-overlay').style.display = 'none';
+            
+            document.getElementById('menu-overlay').style.display = 'flex';
+            document.getElementById('settings-menu-view').style.display = 'flex';
+        }
+        
+        function closeSettingsMenu() {
+            document.getElementById('settings-menu-view').style.display = 'none';
+            if (isSettingsFromPause) {
+                document.getElementById('menu-overlay').style.display = 'none';
+                document.getElementById('pause-overlay').style.display = 'flex';
+            } else {
+                document.getElementById('main-menu-view').style.display = 'flex';
+            }
+        }
+        
+        const glutSpecials = {
+            "ArrowLeft": 100, "ArrowUp": 101, "ArrowRight": 102, "ArrowDown": 103,
+            "PageUp": 104, "PageDown": 105, "Home": 106, "End": 107, "Insert": 108
+        };
+        
+        const defaultBinds = [
+            { id: 0, text: "UP", keyText: "W", key: 119, isSpecial: false },
+            { id: 1, text: "DOWN", keyText: "S", key: 115, isSpecial: false },
+            { id: 2, text: "SPECIAL", keyText: "SPACE", key: 32, isSpecial: false },
+            { id: 3, text: "UP", keyText: "ARROW UP", key: 101, isSpecial: true },
+            { id: 4, text: "DOWN", keyText: "ARROW DOWN", key: 103, isSpecial: true },
+            { id: 5, text: "SPECIAL", keyText: "NUM 0", key: 48, isSpecial: false },
+            { id: 6, text: "PAUSE", keyText: "ENTER", key: 13, isSpecial: false }
+        ];
+        
+        let currentBinds = JSON.parse(localStorage.getItem('pongBinds')) || defaultBinds;
+        
+        function applyBindsToCpp() {
+            if (Module && Module._set_key_bind) {
+                currentBinds.forEach(b => {
+                    Module._set_key_bind(b.id, b.key, b.isSpecial);
+                });
+            } else {
+                setTimeout(applyBindsToCpp, 500);
+            }
+        }
+        applyBindsToCpp();
+        
+        function updateBindButtons() {
+            const btns = document.querySelectorAll('.bind-btn');
+            if (btns.length === 0) return;
+            btns.forEach((btn, idx) => {
+                if(currentBinds[idx]) {
+                    btn.innerText = currentBinds[idx].text + ": " + currentBinds[idx].keyText;
+                }
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', updateBindButtons);
+        
+        let listeningBtn = null;
+        let listeningId = -1;
+        
+        function listenKey(actionId, btnEl) {
+            if (listeningBtn) return;
+            listeningBtn = btnEl;
+            listeningId = actionId;
+            btnEl.innerText = "PRESS ANY KEY...";
+            
+            const handler = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                let keyName = e.key.toUpperCase();
+                if (e.code === 'Space') keyName = 'SPACE';
+                
+                let keyCode = 0;
+                let isSpecial = false;
+                
+                if (glutSpecials[e.key]) {
+                    keyCode = glutSpecials[e.key];
+                    isSpecial = true;
+                    keyName = e.key.replace(/([A-Z])/g, ' $1').trim().toUpperCase();
+                } else if (e.key === 'Enter') {
+                    keyCode = 13;
+                } else if (e.code === 'Space') {
+                    keyCode = 32;
+                } else if (e.key.length === 1) {
+                    keyCode = e.key.toLowerCase().charCodeAt(0);
+                } else {
+                    return; // Ignore unknown keys like Shift, Control without another key
+                }
+                
+                currentBinds[actionId].keyText = keyName;
+                currentBinds[actionId].key = keyCode;
+                currentBinds[actionId].isSpecial = isSpecial;
+                
+                localStorage.setItem('pongBinds', JSON.stringify(currentBinds));
+                
+                if (Module && Module._set_key_bind) {
+                    Module._set_key_bind(actionId, keyCode, isSpecial);
+                }
+                
+                updateBindButtons();
+                listeningBtn = null;
+                listeningId = -1;
+                
+                window.removeEventListener('keydown', handler, true);
+            };
+            
+            window.addEventListener('keydown', handler, true);
         }
 
         // Funções de Audio via Web Audio API injetadas no emscripten
