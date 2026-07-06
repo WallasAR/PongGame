@@ -1,8 +1,6 @@
 {
-  "version": 2,
-  "public": false,
   "buildCommand": "echo 'Built locally. Skipping.'",
-  "outputDirectory": "web",
+  "outputDirectory": "public",
   "routes": [
     { "src": "/(.*)", "dest": "/$1" }
   ]
