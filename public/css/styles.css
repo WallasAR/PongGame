@@ -1,0 +1,264 @@
+body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Press Start 2P', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Scoreboard estético e minimalista em escala de cinza */
+        .scoreboard {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 960px;
+            margin-bottom: 20px;
+            padding: 0 20px;
+            text-transform: uppercase;
+        }
+
+        .score-box h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #ccc;
+            letter-spacing: 2px;
+        }
+
+        .score {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        #pause-indicator {
+            font-weight: bold;
+            display: none;
+        }
+
+        /* Barras de Especial em escala de cinza */
+        .special-container {
+            width: 150px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #fff;
+            margin-top: 5px;
+            position: relative;
+        }
+        .special-bar {
+            height: 100%;
+            background-color: #fff;
+            width: 0%;
+            transition: width 0.2s;
+        }
+        .special-bar.p2 {
+            background-color: #ccc;
+            float: right;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .skull-zone {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            overflow: hidden;
+            display: none;
+            z-index: 5;
+            pointer-events: none;
+        }
+        .skull-inner {
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            display: flex;
+            flex-direction: row;
+            color: #aa0000;
+            opacity: 0.3;
+        }
+        .skull-col {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            align-items: center;
+            flex: 1;
+            height: 100%;
+        }
+        .skull-char {
+            display: inline-block;
+            transform: rotate(45deg);
+            font-size: clamp(32px, 8vh, 80px);
+            line-height: 1;
+        }
+
+
+        /* O canvas gerado pelo emscripten */
+        canvas.emscripten {
+            display: block;
+            border: 2px solid #fff;
+            outline: none;
+            background-color: #000;
+            max-width: 100vw;
+            max-height: 65vh;
+            aspect-ratio: 960 / 500;
+            object-fit: contain;
+        }
+
+        #ascii-ball {
+            position: absolute;
+            font-family: monospace;
+            font-size: 8px;
+            line-height: 8px;
+            color: #fff; /* Volta a ser branco como o original */
+            font-weight: bold;
+            transform: translate(-50%, 50%) scale(0.4); 
+            pointer-events: none;
+            margin: 0;
+            text-align: center;
+            z-index: 5;
+        }
+        
+        .ascii-ball-trail {
+            position: absolute;
+            font-family: monospace;
+            font-size: 8px;
+            line-height: 8px;
+            color: #aaa;
+            font-weight: bold;
+            transform: translate(-50%, 50%) scale(0.4); 
+            pointer-events: none;
+            margin: 0;
+            text-align: center;
+            opacity: 0;
+            z-index: 4;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 40px;
+            text-align: center;
+        }
+
+        .player-controls p {
+            margin: 5px 0;
+            font-size: 0.8rem;
+        }
+
+        .key {
+            display: inline-block;
+            border: 1px solid #fff;
+            padding: 2px 6px;
+        }
+
+        /* Overlay de Loading */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+        }
+        
+        /* Menu Overlay (Para uso no navegador) */
+        .menu-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            z-index: 10;
+        }
+        .menu-overlay::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 11;
+        }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-2px, 0px) rotate(1deg); }
+            30% { transform: translate(2px, 1px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-2px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(0px, 0px) rotate(0deg); }
+        }
+
+        .menu-overlay h1 {
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+            z-index: 12;
+            text-align: center;
+        }
+        .menu-overlay h2 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            z-index: 12;
+        }
+        .menu-overlay button {
+            background: transparent;
+            border: 4px solid white;
+            color: white;
+            padding: 15px 20px;
+            margin: 10px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            width: 350px;
+            z-index: 12;
+            text-transform: uppercase;
+        }
+        .menu-overlay button:hover {
+            animation: shake 0.4s ease-out;
+            animation-iteration-count: 1;
+            background: white;
+            color: black;
+        }
+        
+        .retro-select {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            font-family: inherit;
+            font-size: 0.8rem;
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .retro-select option {
+            background: black;
+            color: white;
+        }
