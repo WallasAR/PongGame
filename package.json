@@ -8,5 +8,8 @@
   },
   "devDependencies": {
     "serve": "^14.2.1"
+  },
+  "dependencies": {
+    "puppeteer": "^25.2.1"
   }
 }

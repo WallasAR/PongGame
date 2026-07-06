@@ -145,6 +145,22 @@
             pointer-events: none;
             margin: 0;
             text-align: center;
+            z-index: 5;
+        }
+        
+        .ascii-ball-trail {
+            position: absolute;
+            font-family: monospace;
+            font-size: 8px;
+            line-height: 8px;
+            color: #aaa;
+            font-weight: bold;
+            transform: translate(-50%, 50%) scale(0.4); 
+            pointer-events: none;
+            margin: 0;
+            text-align: center;
+            opacity: 0;
+            z-index: 4;
         }
 
         .controls {
@@ -420,6 +436,11 @@
             <div id="skull-right" class="skull-zone" style="right: 0;"><div class="skull-inner" id="skull-inner-r"></div></div>
             
             <pre id="ascii-ball"></pre>
+            <pre class="ascii-ball-trail" id="ascii-trail-0"></pre>
+            <pre class="ascii-ball-trail" id="ascii-trail-1"></pre>
+            <pre class="ascii-ball-trail" id="ascii-trail-2"></pre>
+            <pre class="ascii-ball-trail" id="ascii-trail-3"></pre>
+            <pre class="ascii-ball-trail" id="ascii-trail-4"></pre>
         </div>
     </div>    </div>
     
@@ -519,11 +540,43 @@
             const asciiBall = document.getElementById('ascii-ball');
             if (isMenu || !showBall) {
                 asciiBall.style.display = 'none';
+                for (let i=0; i<5; i++) document.getElementById('ascii-trail-'+i).style.display = 'none';
+                window.trailHistory = [];
             } else {
                 asciiBall.style.display = 'block';
-                asciiBall.style.left = (bX / 960 * 100) + "%";
-                // OpenGL 0 is bottom, HTML 0 is top
-                asciiBall.style.bottom = (bY / 500 * 100) + "%";
+                const leftPos = (bX / 960 * 100) + "%";
+                const bottomPos = (bY / 500 * 100) + "%";
+                asciiBall.style.left = leftPos;
+                asciiBall.style.bottom = bottomPos;
+                
+                // Trails
+                if (!window.trailHistory) window.trailHistory = [];
+                let th = window.trailHistory;
+                
+                if (th.length > 0) {
+                    let lastP = th[0];
+                    if (Math.abs(bX - lastP.x) > 5 || Math.abs(bY - lastP.y) > 5) {
+                        th.unshift({left: leftPos, bottom: bottomPos, x: bX, y: bY, text: asciiBall.innerText});
+                    }
+                } else {
+                    th.unshift({left: leftPos, bottom: bottomPos, x: bX, y: bY, text: asciiBall.innerText});
+                }
+                
+                if (th.length > 5) th.pop();
+                
+                for (let i=0; i<5; i++) {
+                    let tEl = document.getElementById('ascii-trail-'+i);
+                    if (i < th.length) {
+                        tEl.style.display = 'block';
+                        tEl.style.left = th[i].left;
+                        tEl.style.bottom = th[i].bottom;
+                        tEl.innerText = th[i].text;
+                        tEl.style.opacity = (5 - i) / 7.0; 
+                        tEl.style.transform = `translate(-50%, 50%) scale(${0.4 - (i * 0.05)})`;
+                    } else {
+                        tEl.style.display = 'none';
+                    }
+                }
             }
         };
 
@@ -669,9 +722,14 @@
         function updateBindButtons() {
             const btns = document.querySelectorAll('.bind-btn');
             if (btns.length === 0) return;
-            btns.forEach((btn, idx) => {
-                if(currentBinds[idx]) {
-                    btn.innerText = currentBinds[idx].text + ": " + currentBinds[idx].keyText;
+            btns.forEach((btn) => {
+                const match = btn.getAttribute('onclick').match(/listenKey\((\d+)/);
+                if (match) {
+                    const actionId = parseInt(match[1]);
+                    const bindObj = currentBinds.find(b => b.id === actionId);
+                    if(bindObj) {
+                        btn.innerText = bindObj.text + ": " + bindObj.keyText;
+                    }
                 }
             });
         }

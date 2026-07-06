@@ -1,7 +1,9 @@
 {
   "version": 2,
   "public": false,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/web/$1" }
+  "buildCommand": "echo 'Built locally. Skipping.'",
+  "outputDirectory": "web",
+  "routes": [
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }

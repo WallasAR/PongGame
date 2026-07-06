@@ -121,46 +121,70 @@ extern "C" {
 // Efeitos Arcade
 int shake_frames = 0;
 int respawn_delay_frames = 0;
+enum ParticleType {
+    PART_NORMAL = 0,
+    PART_FIRE = 1,
+    PART_SMOKE = 2,
+    PART_FLASH = 3,
+    PART_ICE = 4,
+    PART_SPARK = 5
+};
+
 struct Particle {
     float x, y, dx, dy;
     int life;
     float r, g, b;
+    int type;
 };
-#define NUM_PARTICLES 200
+#define NUM_PARTICLES 400
 Particle particles[NUM_PARTICLES];
 
-void initExplosion(float x, float y) {
+void spawnParticle(float x, float y, float dx, float dy, int life, float r, float g, float b, int type) {
     for (int i = 0; i < NUM_PARTICLES; i++) {
-        particles[i].x = x;
-        particles[i].y = y;
+        if (particles[i].life <= 0) {
+            particles[i].x = x; particles[i].y = y;
+            particles[i].dx = dx; particles[i].dy = dy;
+            particles[i].life = life;
+            particles[i].r = r; particles[i].g = g; particles[i].b = b;
+            particles[i].type = type;
+            break;
+        }
+    }
+}
+
+void initExplosion(float x, float y) {
+    for (int i = 0; i < 200; i++) {
         float angle = (rand() % 360) * 3.14159f / 180.0f;
         float speed = (rand() % 100) / 10.0f + 2.0f;
-        particles[i].dx = cos(angle) * speed;
-        particles[i].dy = sin(angle) * speed;
-        particles[i].life = 20 + rand() % 20; // 20 to 40 frames
-        float gray = (rand() % 100) / 100.0f;
-        particles[i].r = gray + 0.2f;
-        particles[i].g = gray + 0.2f;
-        particles[i].b = gray + 0.2f;
+        float gray = (rand() % 100) / 100.0f + 0.2f;
+        spawnParticle(x, y, cos(angle) * speed, sin(angle) * speed, 20 + rand() % 20, gray, gray, gray, PART_NORMAL);
     }
 }
 
 void initHitExplosion(float x, float y, float dir_x) {
-    int spawned = 0;
-    for (int i = 0; i < NUM_PARTICLES; i++) {
-        if (particles[i].life <= 0) {
-            particles[i].x = x;
-            particles[i].y = y;
-            float angle = ((rand() % 120) - 60) * 3.14159f / 180.0f; // Cone angle
-            if (dir_x < 0) angle += 3.14159f; 
-            float speed = (rand() % 50) / 10.0f + 2.0f;
-            particles[i].dx = cos(angle) * speed;
-            particles[i].dy = sin(angle) * speed;
-            particles[i].life = 10 + rand() % 10;
-            particles[i].r = 1.0f; particles[i].g = 1.0f; particles[i].b = 1.0f;
-            spawned++;
-            if (spawned >= 30) break; // Only spawn 30 particles per hit
-        }
+    for (int i = 0; i < 30; i++) {
+        float angle = ((rand() % 120) - 60) * 3.14159f / 180.0f;
+        if (dir_x < 0) angle += 3.14159f; 
+        float speed = (rand() % 50) / 10.0f + 2.0f;
+        spawnParticle(x, y, cos(angle) * speed, sin(angle) * speed, 10 + rand() % 10, 1.0f, 1.0f, 1.0f, PART_NORMAL);
+    }
+}
+
+void initSmoke(float x, float y) {
+    for (int i = 0; i < 40; i++) {
+        float angle = (rand() % 360) * 3.14159f / 180.0f;
+        float speed = (rand() % 30) / 10.0f + 0.5f; // Slower
+        float gray = (rand() % 40) / 100.0f + 0.2f; // Darker gray
+        spawnParticle(x, y, cos(angle) * speed, sin(angle) * speed, 30 + rand() % 30, gray, gray, gray, PART_SMOKE);
+    }
+}
+
+void initTeleportFlash(float x, float y) {
+    for (int i = 0; i < 20; i++) {
+        // Mostly vertical burst
+        float angle = (rand() % 20 - 10 + (rand() % 2 == 0 ? 90 : 270)) * 3.14159f / 180.0f;
+        float speed = (rand() % 100) / 10.0f + 5.0f;
+        spawnParticle(x, y, cos(angle) * speed, sin(angle) * speed, 15 + rand() % 10, 0.0f, 1.0f, 1.0f, PART_FLASH);
     }
 }
 
@@ -318,12 +342,13 @@ void display()
         glTranslatef((rand() % 10) - 5, (rand() % 10) - 5, 0.0f);
     }
     
-    // Draw ball if not ghosted
+    // Draw ball if not ghosted (Only on Native, HTML handles WebGL overlay ASCII)
+#ifndef __EMSCRIPTEN__
     if (ghost_frames == 0) {
         glPushMatrix();
         glTranslatef(ball_x, ball_y, 0);
-        glBegin(GL_QUADS);
         glColor3f(1.0, 1.0, 1.0);
+        glBegin(GL_QUADS);
         glVertex2f(-BALL_RADIUS, -BALL_RADIUS);
         glVertex2f(BALL_RADIUS, -BALL_RADIUS);
         glVertex2f(BALL_RADIUS, BALL_RADIUS);
@@ -331,6 +356,7 @@ void display()
         glEnd();
         glPopMatrix();
     }
+#endif
 	
 	if (currentState == MENU) {
 #ifndef __EMSCRIPTEN__
@@ -373,25 +399,43 @@ void display()
  	glColor3f(1.0, 1.0, 1.0);
  	
  	// Player 01:
+    if (p1_fireball_active) glColor3f(1.0, 0.2, 0.2); // RED for Smash
+    else if (p1_shield_frames > 0) glColor3f(0.2, 0.5, 1.0); // BLUE for Shield
+    else if (p1_freeze_frames > 0) glColor3f(0.5, 1.0, 1.0); // ICE for Frozen
+    else if (p1_emp_frames > 0) glColor3f(1.0, 1.0, 0.2); // YELLOW for EMP
+    else glColor3f(1.0, 1.0, 1.0);
+    
+    float p1_draw_x = paddle1_x;
+    if (p1_fireball_active) p1_draw_x += (rand() % 4) - 2; // Shake animation
+    
  	glBegin(GL_TRIANGLES);
- 	glVertex2f(paddle1_x, paddle1_y);
- 	glVertex2f(paddle1_x + PADDLE_WIDTH, paddle1_y);
- 	glVertex2f(paddle1_x + PADDLE_WIDTH, paddle1_y + paddle1_height);
+ 	glVertex2f(p1_draw_x, paddle1_y);
+ 	glVertex2f(p1_draw_x + PADDLE_WIDTH, paddle1_y);
+ 	glVertex2f(p1_draw_x + PADDLE_WIDTH, paddle1_y + paddle1_height);
  	
- 	glVertex2f(paddle1_x, paddle1_y);
- 	glVertex2f(paddle1_x + PADDLE_WIDTH, paddle1_y + paddle1_height);
- 	glVertex2f(paddle1_x, paddle1_y + paddle1_height);
+ 	glVertex2f(p1_draw_x, paddle1_y);
+ 	glVertex2f(p1_draw_x + PADDLE_WIDTH, paddle1_y + paddle1_height);
+ 	glVertex2f(p1_draw_x, paddle1_y + paddle1_height);
  	glEnd();
     
  	// Player 02:
+    if (p2_fireball_active) glColor3f(1.0, 0.2, 0.2);
+    else if (p2_shield_frames > 0) glColor3f(0.2, 0.5, 1.0);
+    else if (p2_freeze_frames > 0) glColor3f(0.5, 1.0, 1.0);
+    else if (p2_emp_frames > 0) glColor3f(1.0, 1.0, 0.2);
+    else glColor3f(1.0, 1.0, 1.0);
+    
+    float p2_draw_x = paddle2_x;
+    if (p2_fireball_active) p2_draw_x += (rand() % 4) - 2; // Shake animation
+    
  	glBegin(GL_TRIANGLES);
- 	glVertex2f(paddle2_x, paddle2_y);
- 	glVertex2f(paddle2_x + PADDLE_WIDTH, paddle2_y);
- 	glVertex2f(paddle2_x + PADDLE_WIDTH, paddle2_y + paddle2_height);
+ 	glVertex2f(p2_draw_x, paddle2_y);
+ 	glVertex2f(p2_draw_x + PADDLE_WIDTH, paddle2_y);
+ 	glVertex2f(p2_draw_x + PADDLE_WIDTH, paddle2_y + paddle2_height);
  	
- 	glVertex2f(paddle2_x, paddle2_y);
- 	glVertex2f(paddle2_x + PADDLE_WIDTH, paddle2_y + paddle2_height);
- 	glVertex2f(paddle2_x, paddle2_y + paddle2_height);
+ 	glVertex2f(p2_draw_x, paddle2_y);
+ 	glVertex2f(p2_draw_x + PADDLE_WIDTH, paddle2_y + paddle2_height);
+ 	glVertex2f(p2_draw_x, paddle2_y + paddle2_height);
  	glEnd();
  	
  	// Rest of draw...
@@ -420,6 +464,7 @@ void display()
             glVertex2f(paddle2_trail[i].x, paddle2_trail[i].y + paddle2_height);
             glEnd();
         }
+#ifndef __EMSCRIPTEN__
         if (ball_trail[i].life > 0 && ghost_frames <= 0) {
             float alpha = ball_trail[i].life / 12.0f * 0.6f;
             glColor4f(1.0f, 1.0f, 1.0f, alpha);
@@ -430,6 +475,7 @@ void display()
             glVertex2f(ball_trail[i].x - BALL_RADIUS, ball_trail[i].y + BALL_RADIUS);
             glEnd();
         }
+#endif
     }
     
     // Draw Particles
@@ -438,11 +484,19 @@ void display()
             float alpha = particles[i].life / 40.0f;
             if (alpha > 1.0f) alpha = 1.0f;
             glColor4f(particles[i].r, particles[i].g, particles[i].b, alpha);
+            
+            float w = 6.0f, h = 6.0f;
+            if (particles[i].type == PART_SMOKE) { w = 12.0f; h = 12.0f; }
+            else if (particles[i].type == PART_FIRE) { w = 8.0f; h = 8.0f; }
+            else if (particles[i].type == PART_FLASH) { w = 4.0f; h = 120.0f; } // Tall flash
+            else if (particles[i].type == PART_SPARK) { w = 6.0f; h = 6.0f; }
+            else if (particles[i].type == PART_ICE) { w = 6.0f; h = 6.0f; }
+            
             glBegin(GL_QUADS);
-            glVertex2f(particles[i].x - 2, particles[i].y - 2);
-            glVertex2f(particles[i].x + 2, particles[i].y - 2);
-            glVertex2f(particles[i].x + 2, particles[i].y + 2);
-            glVertex2f(particles[i].x - 2, particles[i].y + 2);
+            glVertex2f(particles[i].x - w, particles[i].y - h);
+            glVertex2f(particles[i].x + w, particles[i].y - h);
+            glVertex2f(particles[i].x + w, particles[i].y + h);
+            glVertex2f(particles[i].x - w, particles[i].y + h);
             glEnd();
         }
     }
@@ -479,15 +533,23 @@ void trigger_skill(int player, int skill_type) {
     if (player == 1) {
         if (skill_type == SKILL_SMASH) p1_fireball_active = true;
         else if (skill_type == SKILL_SHIELD) p1_shield_frames = 300;
-        else if (skill_type == SKILL_GHOST) ghost_frames = 72; // 1.2s
-        else if (skill_type == SKILL_BLINK) { ball_x += 200; if (ball_x > WIDTH) ball_x = WIDTH; }
+        else if (skill_type == SKILL_GHOST) { ghost_frames = 72; initSmoke(ball_x, ball_y); } // 1.2s
+        else if (skill_type == SKILL_BLINK) { 
+            initTeleportFlash(ball_x, ball_y);
+            ball_x += 200; if (ball_x > WIDTH) ball_x = WIDTH; 
+            initTeleportFlash(ball_x, ball_y);
+        }
         else if (skill_type == SKILL_FREEZE) p2_freeze_frames = 240; // 4s
         else if (skill_type == SKILL_EMP) p2_emp_frames = 240; // 4s
     } else {
         if (skill_type == SKILL_SMASH) p2_fireball_active = true;
         else if (skill_type == SKILL_SHIELD) p2_shield_frames = 300;
-        else if (skill_type == SKILL_GHOST) ghost_frames = 72;
-        else if (skill_type == SKILL_BLINK) { ball_x -= 200; if (ball_x < 0) ball_x = 0; }
+        else if (skill_type == SKILL_GHOST) { ghost_frames = 72; initSmoke(ball_x, ball_y); }
+        else if (skill_type == SKILL_BLINK) { 
+            initTeleportFlash(ball_x, ball_y);
+            ball_x -= 200; if (ball_x < 0) ball_x = 0; 
+            initTeleportFlash(ball_x, ball_y);
+        }
         else if (skill_type == SKILL_FREEZE) p1_freeze_frames = 240;
         else if (skill_type == SKILL_EMP) p1_emp_frames = 240;
     }
@@ -554,15 +616,38 @@ void update_physics()
                 else if (p2_spec_pressed && p2_loadout[2] != SKILL_NONE) { trigger_skill(2, p2_loadout[2]); special_charge_2 = 0; }
             }
 	        
-	        paddle1_height = (p1_shield_frames > 0) ? PADDLE_HEIGHT * 2 : PADDLE_HEIGHT;
+	        float p1_target_h = (p1_shield_frames > 0) ? PADDLE_HEIGHT * 2 : PADDLE_HEIGHT;
+            if (paddle1_height < p1_target_h) paddle1_height += 5.0f;
+            if (paddle1_height > p1_target_h) paddle1_height -= 5.0f;
 	        if (p1_shield_frames > 0) p1_shield_frames--;
-	        paddle2_height = (p2_shield_frames > 0) ? PADDLE_HEIGHT * 2 : PADDLE_HEIGHT;
+	        
+            float p2_target_h = (p2_shield_frames > 0) ? PADDLE_HEIGHT * 2 : PADDLE_HEIGHT;
+            if (paddle2_height < p2_target_h) paddle2_height += 5.0f;
+            if (paddle2_height > p2_target_h) paddle2_height -= 5.0f;
 	        if (p2_shield_frames > 0) p2_shield_frames--;
 	        if (ghost_frames > 0) ghost_frames--;
 	        if (p1_freeze_frames > 0) p1_freeze_frames--;
 	        if (p2_freeze_frames > 0) p2_freeze_frames--;
 	        if (p1_emp_frames > 0) p1_emp_frames--;
 	        if (p2_emp_frames > 0) p2_emp_frames--;
+            
+            // Passive Ability Particles
+            if (p1_freeze_frames > 0 && rand() % 2 == 0) {
+                spawnParticle(paddle1_x + (rand() % 10), paddle1_y + (rand() % 60), 0, (rand() % 20)/10.0f + 1.0f, 20 + rand() % 20, 0.5f, 1.0f, 1.0f, PART_ICE);
+            }
+            if (p2_freeze_frames > 0 && rand() % 2 == 0) {
+                spawnParticle(paddle2_x + (rand() % 10), paddle2_y + (rand() % 60), 0, (rand() % 20)/10.0f + 1.0f, 20 + rand() % 20, 0.5f, 1.0f, 1.0f, PART_ICE);
+            }
+            if (p1_emp_frames > 0 && rand() % 3 == 0) {
+                spawnParticle(paddle1_x - 5 + (rand() % 20), paddle1_y - 10 + (rand() % 80), (rand() % 10 - 5)/2.0f, (rand() % 10 - 5)/2.0f, 5 + rand() % 10, 1.0f, 1.0f, 0.2f, PART_SPARK);
+            }
+            if (p2_emp_frames > 0 && rand() % 3 == 0) {
+                spawnParticle(paddle2_x - 5 + (rand() % 20), paddle2_y - 10 + (rand() % 80), (rand() % 10 - 5)/2.0f, (rand() % 10 - 5)/2.0f, 5 + rand() % 10, 1.0f, 1.0f, 0.2f, PART_SPARK);
+            }
+            if ((ball_dx > 20.0f || ball_dx < -20.0f)) {
+                // Fireball active (speed > 20)
+                spawnParticle(ball_x + (rand() % 10 - 5), ball_y + (rand() % 10 - 5), -ball_dx * 0.2f, -ball_dy * 0.2f, 15 + rand() % 10, 1.0f, 0.3f, 0.0f, PART_FIRE);
+            }
 	    }
 	    
     	// Mover as paletas (sempre ativas, mesmo durante delays)

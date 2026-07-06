@@ -7371,6 +7371,9 @@ async function createWasm() {
     };
   var _glBegin = _emscripten_glBegin;
 
+  var _emscripten_glBlendFunc = (x0, x1) => GLctx.blendFunc(x0, x1);
+  var _glBlendFunc = _emscripten_glBlendFunc;
+
   var _emscripten_glClear = (x0) => GLctx.clear(x0);
   var _glClear = _emscripten_glClear;
 
@@ -7402,6 +7405,8 @@ async function createWasm() {
   var _glColor4f = _emscripten_glColor4f;
   var _emscripten_glColor3f = (r, g, b) => _glColor4f(r, g, b, 1);
   var _glColor3f = _emscripten_glColor3f;
+
+
 
 
   var _emscripten_glEnd = () => {
@@ -7445,6 +7450,15 @@ async function createWasm() {
       }
     };
   var _glMatrixMode = _emscripten_glMatrixMode;
+
+  var _emscripten_glTranslated = (x, y, z) => {
+      GLImmediate.matricesModified = true;
+      GLImmediate.matrixVersion[GLImmediate.currentMatrix] = (GLImmediate.matrixVersion[GLImmediate.currentMatrix] + 1)|0;
+      GLImmediate.matrixLib.mat4.translate(GLImmediate.matrix[GLImmediate.currentMatrix], [x, y, z]);
+    };
+  var _glTranslated = _emscripten_glTranslated;
+  var _emscripten_glTranslatef = _glTranslated;
+  var _glTranslatef = _emscripten_glTranslatef;
 
   var _emscripten_glVertex2f = (x, y) => {
       assert(GLImmediate.mode >= 0); // must be in begin/end
@@ -8425,17 +8439,20 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('onCOSStore');
 }
 var ASM_CONSTS = {
-  68780: ($0, $1, $2, $3) => { if(window.updateUI) window.updateUI($0, $1, $2, $3); },  
- 68837: () => { if(window.playBeep) window.playBeep(400, 100); },  
- 68888: () => { if(window.playBeep) window.playBeep(400, 100); },  
- 68939: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
- 69067: () => { if(window.playBeep) window.playBeep(800, 100); setTimeout(function(){if(window.playBeep) window.playBeep(900, 300);}, 150); },  
- 69195: () => { if(window.playBeep) window.playBeep(600, 100); },  
- 69246: () => { if(window.playBeep) window.playBeep(600, 100); }
+  71764: ($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) => { if(window.updateUI) window.updateUI($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12); },  
+ 71860: () => { if(window.playExplosion) window.playExplosion(); },  
+ 71913: () => { if(window.playBeep) window.playBeep(400, 100); },  
+ 71964: () => { if(window.playBeep) window.playBeep(400, 100); },  
+ 72015: () => { if(window.playExplosion) window.playExplosion(); },  
+ 72068: () => { if(window.playBeep) window.playBeep(600, 100); },  
+ 72119: () => { if(window.playBeep) window.playBeep(600, 100); }
 };
 
 // Imports from the Wasm binary.
-var _select_menu = Module['_select_menu'] = makeInvalidEarlyAccess('_select_menu');
+var _set_key_bind = Module['_set_key_bind'] = makeInvalidEarlyAccess('_set_key_bind');
+var _set_loadout = Module['_set_loadout'] = makeInvalidEarlyAccess('_set_loadout');
+var _start_game = Module['_start_game'] = makeInvalidEarlyAccess('_start_game');
+var _trigger_action = Module['_trigger_action'] = makeInvalidEarlyAccess('_trigger_action');
 var _main = Module['_main'] = makeInvalidEarlyAccess('_main');
 var _fflush = makeInvalidEarlyAccess('_fflush');
 var _strerror = makeInvalidEarlyAccess('_strerror');
@@ -8453,7 +8470,10 @@ var wasmMemory = makeInvalidEarlyAccess('wasmMemory');
 var wasmTable = makeInvalidEarlyAccess('wasmTable');
 
 function assignWasmExports(wasmExports) {
-  assert(typeof wasmExports['select_menu'] != 'undefined', 'missing Wasm export: select_menu');
+  assert(typeof wasmExports['set_key_bind'] != 'undefined', 'missing Wasm export: set_key_bind');
+  assert(typeof wasmExports['set_loadout'] != 'undefined', 'missing Wasm export: set_loadout');
+  assert(typeof wasmExports['start_game'] != 'undefined', 'missing Wasm export: start_game');
+  assert(typeof wasmExports['trigger_action'] != 'undefined', 'missing Wasm export: trigger_action');
   assert(typeof wasmExports['__main_argc_argv'] != 'undefined', 'missing Wasm export: __main_argc_argv');
   assert(typeof wasmExports['fflush'] != 'undefined', 'missing Wasm export: fflush');
   assert(typeof wasmExports['strerror'] != 'undefined', 'missing Wasm export: strerror');
@@ -8467,7 +8487,10 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['emscripten_stack_get_current'] != 'undefined', 'missing Wasm export: emscripten_stack_get_current');
   assert(typeof wasmExports['memory'] != 'undefined', 'missing Wasm export: memory');
   assert(typeof wasmExports['__indirect_function_table'] != 'undefined', 'missing Wasm export: __indirect_function_table');
-  _select_menu = Module['_select_menu'] = createExportWrapper('select_menu', 1);
+  _set_key_bind = Module['_set_key_bind'] = createExportWrapper('set_key_bind', 3);
+  _set_loadout = Module['_set_loadout'] = createExportWrapper('set_loadout', 4);
+  _start_game = Module['_start_game'] = createExportWrapper('start_game', 2);
+  _trigger_action = Module['_trigger_action'] = createExportWrapper('trigger_action', 1);
   _main = Module['_main'] = createExportWrapper('__main_argc_argv', 2);
   _fflush = createExportWrapper('fflush', 1);
   _strerror = createExportWrapper('strerror', 1);
@@ -8501,13 +8524,19 @@ var wasmImports = {
   /** @export */
   glBegin: _glBegin,
   /** @export */
+  glBlendFunc: _glBlendFunc,
+  /** @export */
   glClear: _glClear,
   /** @export */
   glClearColor: _glClearColor,
   /** @export */
   glColor3f: _glColor3f,
   /** @export */
+  glColor4f: _glColor4f,
+  /** @export */
   glDisable: _glDisable,
+  /** @export */
+  glEnable: _glEnable,
   /** @export */
   glEnd: _glEnd,
   /** @export */
@@ -8516,6 +8545,8 @@ var wasmImports = {
   glLoadIdentity: _glLoadIdentity,
   /** @export */
   glMatrixMode: _glMatrixMode,
+  /** @export */
+  glTranslatef: _glTranslatef,
   /** @export */
   glVertex2f: _glVertex2f,
   /** @export */
